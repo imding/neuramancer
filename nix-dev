@@ -1,0 +1,6 @@
+#!/bin/sh
+
+NIX_SHELL_OPTIONS="$*" exec nix develop \
+--extra-experimental-features "nix-command flakes" \
+--impure \
+--show-trace
