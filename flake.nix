@@ -16,7 +16,9 @@
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           packages = with pkgs; [
+            deno
             dioxus-cli
+            flyctl
             git
             helix
             jujutsu
