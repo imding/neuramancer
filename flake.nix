@@ -34,6 +34,7 @@
               git
               helix
               jujutsu
+              nodejs_24
           ];
 
           cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
