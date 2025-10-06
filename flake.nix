@@ -15,6 +15,8 @@
       ];
       perSystem = { config, self', pkgs, lib, system, ... }:
         let
+          rustTargets = [ "wasm32-unknown-unknown" ];
+
           runtimeDeps = [
               # alsa-lib
               # speechd
@@ -27,14 +29,13 @@
           devDeps = with pkgs; [
               # Uncomment if need for debugging
               # gdb
+              # deno
               cargo-binstall
-              deno
               dioxus-cli
               flyctl
               git
               helix
               jujutsu
-              nodejs_24
           ];
 
           cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
@@ -95,13 +96,13 @@
 
           devShells.nightly = (mkDevShell (pkgs.rust-bin.selectLatestNightlyWith
             (toolchain: toolchain.default.override {
-                targets = [ "wasm32-unknown-unknown" ];
+                targets = rustTargets;
             })));
           devShells.stable = (mkDevShell pkgs.rust-bin.stable.latest.default.override {
-                targets = [ "wasm32-unknown-unknown" ];
+                targets = rustTargets;
             });
           devShells.msrv = (mkDevShell pkgs.rust-bin.stable.${msrv}.default.override {
-                targets = [ "wasm32-unknown-unknown" ];
+                targets = rustTargets;
             });
         };
     };
