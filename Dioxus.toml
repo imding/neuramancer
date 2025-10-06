@@ -1,0 +1,6 @@
+[application]
+name = "Neuramancer"
+
+[web.wasm_opt]
+# Enable after https://github.com/DioxusLabs/dioxus/pull/4187/files is released
+# extra_features = ["--enable-bulk-memory"]
