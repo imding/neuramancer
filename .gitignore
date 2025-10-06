@@ -11,4 +11,7 @@
 **/*.rs.bk
 
 # Config
-.config
+/.config
+
+# Storage
+/qdrant_storage

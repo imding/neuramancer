@@ -15,12 +15,32 @@ Or user shell script
 
 # Serving
 
+## Web
+
 Serve the web application
 ```bash
 dx serve -p web
 ```
 
+## Service Dependencies
+
+Serve locally via docker
+```sh
+docker compose up
+```
+
+Serve the remote Qdrant database via proxy
+```sh
+cd fly_qdrant
+# Service
+fly proxy 6334:6334
+# Dashboard
+fly proxy 6333:6333
+```
+
 # Deploy
+
+## Web
 
 Build the container image
 ```sh
@@ -40,6 +60,13 @@ docker push registry.fly.io/neuramancy:latest
 
 Fly deploy
 ```sh
+fly deploy
+```
+
+## Qdrant
+
+```sh
+cd fly_qdrant
 fly deploy
 ```
 
