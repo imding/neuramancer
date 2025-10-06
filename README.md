@@ -1,5 +1,8 @@
 # Local Environment
 
+Install [Nix](https://nixos.org/download)
+
+
 Install [direnv](https://direnv.net/docs/installation.html#from-binary-builds)
 ```sh
 curl -sfL https://direnv.net/install.sh | bash
