@@ -49,6 +49,7 @@
               "rust-src"
               "rustc"
               "rustfmt"
+              "rust-analyzer"
             ])
             wasm32Toolchain.rust-std
           ];
