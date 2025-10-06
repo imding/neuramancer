@@ -157,6 +157,10 @@
               dioxus-cli
               wasm-bindgen-cli_0_2_104
 
+              # Build dependencies (needed for dx serve/bundle)
+              pkg-config
+              openssl
+
               # Development tools
               git
               helix
