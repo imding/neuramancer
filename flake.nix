@@ -81,7 +81,7 @@
           };
 
           web = craneLib.buildPackage {
-            pname = "neuramancer-web";
+            pname = "neuramancy-web";
             version = "0.1.0";
 
             inherit src;
@@ -116,7 +116,7 @@
           };
 
           web-img = pkgs.dockerTools.streamLayeredImage {
-            name = "neuramancer-web";
+            name = "neuramancy";
             tag = "latest";
             contents = [ web ];
 
@@ -136,11 +136,11 @@
         {
           packages = {
             inherit web;
-            default = web;
           }
           // lib.optionalAttrs pkgs.stdenv.isLinux {
             # Docker images only available on Linux
             inherit web-img;
+            default = web-img;
           };
 
           devShells.default = craneLib.devShell {

@@ -1,5 +1,5 @@
 [application]
-name = "Neuramancer"
+name = "Neuramancy"
 
 [web.wasm_opt]
 # Enable after https://github.com/DioxusLabs/dioxus/pull/4187/files is released

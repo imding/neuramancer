@@ -11,6 +11,36 @@ Or user shell script
 ./nix-dev
 ```
 
+# Serving
+
+Serve the web application
+```bash
+dx serve -p web
+```
+
+# Deploy
+
+Build the container image
+```sh
+nix build
+```
+
+Load image into Docker
+```sh
+./result | docker image load
+```
+
+Tag and push image
+```sh
+docker image tag neuramancy:latest registry.fly.io/neuramancy:latest
+docker push registry.fly.io/neuramancy:latest
+```
+
+Fly deploy
+```sh
+fly deploy
+```
+
 # Development
 
 Your new workspace contains a member crate for each of the web, desktop and mobile platforms, a `ui` crate for shared components and a `api` crate for shared backend logic:
@@ -68,18 +98,5 @@ The workspace contains a `api` crate with shared backend logic. This crate defin
 api/
 ├─ src/
 │  ├─ lib.rs # Exports a server function that echos the input string
-```
-
-### Serving Your App
-
-Navigate to the platform crate of your choice:
-```bash
-cd web
-```
-
-and serve:
-
-```bash
-dx serve
 ```
 
