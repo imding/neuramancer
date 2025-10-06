@@ -1,19 +1,28 @@
 [workspace]
 resolver = "2"
 members = [
+    "api",
+    "schema",
     "ui",
-    "web",
+
     "desktop",
     "mobile",
-    "api",
+    "web",
 ]
 
 [workspace.dependencies]
-dioxus = { version = "0.6.3" }
-
 # workspace
-ui = { path = "ui" }
 api = { path = "api" }
+schema = { path = "schema" }
+ui = { path = "ui" }
+
+chrono = { version = "0.4.42", features = ["serde"] }
+uuid = { version = "1.18.1", features = ["serde", "v4"] }
+
+cfg-if = "1.0.3"
+dioxus = "0.6.3"
+fastembed = "5.2.0"
+serde = "1.0.228"
 
 [profile]
 

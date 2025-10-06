@@ -4,4 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+schema.workspace = true
+
 dioxus = { workspace = true, features = ["fullstack"] }
+
+[features]
+web = ["schema/web"]
+server = ["schema/server"]

@@ -4,5 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-dioxus = { workspace = true }
-api = { workspace = true }
+api = { workspace = true, features = ["web"] }
+
+schema.workspace = true
+
+dioxus.workspace = true
