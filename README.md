@@ -1,3 +1,16 @@
+# Local Environment
+
+Install [direnv](https://direnv.net/docs/installation.html#from-binary-builds)
+```sh
+curl -sfL https://direnv.net/install.sh | bash
+direnv allow
+```
+
+Or user shell script
+```sh
+./nix-dev
+```
+
 # Development
 
 Your new workspace contains a member crate for each of the web, desktop and mobile platforms, a `ui` crate for shared components and a `api` crate for shared backend logic:
