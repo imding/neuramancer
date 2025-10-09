@@ -1,109 +1,177 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    rust-overlay.url = "github:oxalica/rust-overlay";
+    crane.url = "github:ipetkov/crane";
+
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.rust-analyzer-src.follows = "";
+    };
   };
 
-  outputs = inputs:
+  outputs =
+    inputs:
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [
-          "x86_64-linux"
-          # "aarch64-linux"
-          # "x86_64-darwin"
-          # "aarch64-darwin"
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
       ];
-      perSystem = { config, self', pkgs, lib, system, ... }:
-        let
-          rustTargets = [ "wasm32-unknown-unknown" ];
 
-          runtimeDeps = [
-              # alsa-lib
-              # speechd
+      perSystem =
+        {
+          config,
+          self',
+          pkgs,
+          lib,
+          system,
+          ...
+        }:
+        let
+          fenixPkgs = inputs.fenix.packages.${system};
+          pinnedRust = fenixPkgs.toolchainOf {
+            channel = "1.86.0";
+            date = "2025-04-03";
+            sha256 = "sha256-X/4ZBHO3iW0fOenQ3foEvscgAPJYl2abspaBThDOukI=";
+          };
+          wasm32Toolchain = fenixPkgs.targets.wasm32-unknown-unknown.toolchainOf {
+            channel = "1.86.0";
+            date = "2025-04-03";
+            sha256 = "sha256-X/4ZBHO3iW0fOenQ3foEvscgAPJYl2abspaBThDOukI=";
+          };
+          toolchain = fenixPkgs.combine [
+            (pinnedRust.withComponents [
+              "cargo"
+              "clippy"
+              "rust-src"
+              "rustc"
+              "rustfmt"
+            ])
+            wasm32Toolchain.rust-std
           ];
-          buildDeps = with pkgs; [
-              pkg-config
-              # Uncomment if binding to C libraries
-              # rustPlatform.bindgenHook
-          ];
-          devDeps = with pkgs; [
-              # Uncomment if need for debugging
-              # gdb
-              # deno
-              cargo-binstall
+
+          craneLib = (inputs.crane.mkLib pkgs).overrideToolchain toolchain;
+
+          wasm-bindgen-cli_0_2_104 = pkgs.stdenv.mkDerivation {
+            pname = "wasm-bindgen-cli";
+            version = "0.2.104";
+
+            src = pkgs.fetchurl {
+              url = "https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.104/wasm-bindgen-0.2.104-x86_64-unknown-linux-musl.tar.gz";
+              sha256 = "sha256-lVN0CQfCwQCPmkS7AO0fWzn/xV2dMxWBta68iRpLdy8=";
+            };
+
+            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+
+            installPhase = ''
+              mkdir -p $out/bin
+              cp wasm-bindgen $out/bin/
+              cp wasm-bindgen-test-runner $out/bin/
+              cp wasm2es6js $out/bin/
+              chmod +x $out/bin/*
+            '';
+          };
+
+          src = lib.cleanSourceWith {
+            src = craneLib.path ./.;
+            filter = path: type: (craneLib.filterCargoSources path type) || (lib.hasInfix "/assets" path);
+          };
+
+          web = craneLib.buildPackage {
+            pname = "neuramancy-web";
+            version = "0.1.0";
+
+            inherit src;
+
+            # Don't build dependencies separately since dx bundle does everything
+            cargoArtifacts = null;
+            doCheck = false;
+            doNotPostBuildInstallCargoBinaries = true;
+
+            nativeBuildInputs = with pkgs; [
               dioxus-cli
+              pkg-config
+              wasm-bindgen-cli_0_2_104
+            ];
+
+            buildInputs = with pkgs; [
+              openssl
+            ];
+
+            buildPhase = ''
+              runHook preBuild
+              dx bundle -p web
+              runHook postBuild
+            '';
+
+            installPhase = ''
+              runHook preInstall
+              mkdir -p $out
+              cp -r target/dx/web/release/web/* $out/
+              runHook postInstall
+            '';
+          };
+
+          web-img = pkgs.dockerTools.streamLayeredImage {
+            name = "neuramancy";
+            tag = "latest";
+            contents = [ web ];
+
+            config = {
+              Cmd = [ "/server" ];
+              Env = [
+                "PORT=8080"
+                "IP=0.0.0.0"
+              ];
+              ExposedPorts = {
+                "8080/tcp" = { };
+              };
+              WorkingDir = "/";
+            };
+          };
+        in
+        {
+          packages = {
+            inherit web;
+          }
+          // lib.optionalAttrs pkgs.stdenv.isLinux {
+            # Docker images only available on Linux
+            inherit web-img;
+            default = web-img;
+          };
+
+          devShells.default = craneLib.devShell {
+            packages = with pkgs; [
+              # Nix tools
+              nixpkgs-fmt
+              nil
+
+              # Deployment tools
+              dive
               flyctl
+
+              # Rust/Dioxus tools
+              dioxus-cli
+              wasm-bindgen-cli_0_2_104
+
+              # Build dependencies (needed for dx serve/bundle)
+              pkg-config
+              openssl
+
+              # Development tools
               git
               helix
               jujutsu
-          ];
+            ];
 
-          cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-          msrv = cargoToml.package.rust-version;
-
-          rustPackage = features:
-            (pkgs.makeRustPlatform {
-              cargo = pkgs.rust-bin.stable.latest.minimal;
-              rustc = pkgs.rust-bin.stable.latest.minimal;
-            }).buildRustPackage {
-              inherit (cargoToml.package) name version;
-              src = ./.;
-              cargoLock.lockFile = ./Cargo.lock;
-              buildFeatures = features;
-              buildInputs = runtimeDeps;
-              nativeBuildInputs = buildDeps;
-              # Uncomment if your cargo tests require networking or otherwise
-              # don't play nicely with the Nix build sandbox:
-              # doCheck = false;
-            };
-
-          mkDevShell = rustc:
-            pkgs.mkShell {
-              shellHook = ''
-                export RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}
-
-                # WSL display setup
-                export DISPLAY=:0
-                
-                # Ensure machine cargo bin is in nix shell PATH at the beginning
-                # This is necessary as long as we're installing dependencies outside of nix
-                export PATH="$HOME/.cargo/bin:$PATH"
-                cargo binstall wasm-bindgen-cli@0.2.104 -y
-
-                if [ -f .config/helix ]; then
-                    cp -r .config/helix ~/.config/helix
-                fi
-
-                if [ -f .config/jujutsu.toml ]; then
-                    mkdir -p ~/.config/jj
-                    cp .config/jujutsu.toml ~/.config/jj/config.toml
-                fi
-              '';
-              buildInputs = runtimeDeps;
-              nativeBuildInputs = buildDeps ++ devDeps ++ [ rustc ];
-            };
-        in {
-          _module.args.pkgs = import inputs.nixpkgs {
-            inherit system;
-            overlays = [ (import inputs.rust-overlay) ];
+            shellHook = ''
+              export RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}
+              export DISPLAY=:0
+            '';
           };
-
-          packages.default = self'.packages.example;
-          devShells.default = self'.devShells.nightly;
-
-          packages.example = (rustPackage "foobar");
-          packages.example-base = (rustPackage "");
-
-          devShells.nightly = (mkDevShell (pkgs.rust-bin.selectLatestNightlyWith
-            (toolchain: toolchain.default.override {
-                targets = rustTargets;
-            })));
-          devShells.stable = (mkDevShell pkgs.rust-bin.stable.latest.default.override {
-                targets = rustTargets;
-            });
-          devShells.msrv = (mkDevShell pkgs.rust-bin.stable.${msrv}.default.override {
-                targets = rustTargets;
-            });
         };
     };
 }
