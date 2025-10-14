@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "backend",
+    "derive",
     "schema",
     "ui",
 
@@ -14,6 +15,7 @@ members = [
 [workspace.dependencies]
 # workspace
 backend = { path = "backend" }
+derive = { path = "derive" }
 schema = { path = "schema" }
 ui = { path = "ui" }
 
@@ -30,9 +32,11 @@ cuid2 = "0.1.4"
 dioxus = "0.6.3"
 eyre = "0.6.12"
 fastembed = "5.2.0"
+once_cell = "1.21.3"
 qdrant-client = "1.15.0"
 serde = "1.0.228"
 serde_json = "1.0.145"
+surrealdb-migrations = "2.3.0"
 # Use after either wasm in dioxus is compatible with rustc 1.89.0
 # tailwind-rs-dioxus = "*"
 thiserror = "2.0.17"

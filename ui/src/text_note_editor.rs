@@ -17,11 +17,15 @@ pub fn TextNoteEditor() -> Element {
                     return;
                 };
                 let content = form_value.as_value();
-                let Ok(response) = backend::save_text_note(content).await else {
-                    return tracing::error!("Failed to save text note");
-                };
 
-                tracing::debug!("{response:?}");
+                match backend::save_note(content).await {
+                    Ok(note) => {
+                        tracing::debug!("{note:?}");
+                    },
+                    Err(error) => {
+                        tracing::error!("{error:?}");
+                    }
+                };
             },
 
             h4 { "Text Note Editor" }

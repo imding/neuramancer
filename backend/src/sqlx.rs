@@ -14,9 +14,7 @@ pub trait SqlxService {
         content: &str,
     ) -> impl Future<Output = Result<TextNote, Self::Error>> + Send;
 
-    fn read_text_notes(
-        &self,
-    ) -> impl Future<Output = Result<Vec<TextNote>, Self::Error>> + Send;
+    fn read_text_notes(&self) -> impl Future<Output = Result<Vec<TextNote>, Self::Error>> + Send;
 }
 
 #[derive(Clone)]
@@ -64,11 +62,10 @@ impl SqlxService for SqliteInMemory {
     }
 
     async fn read_text_notes(&self) -> Result<Vec<TextNote>, Self::Error> {
-        let results: Vec<TextNote> = query_as(
-            r#"select id, content, created_at from text_note order by created_at desc;"#
-        )
-            .fetch_all(&self.client)
-            .await?;
+        let results: Vec<TextNote> =
+            query_as(r#"select id, content, created_at from text_note order by created_at desc;"#)
+                .fetch_all(&self.client)
+                .await?;
 
         Ok(results)
     }

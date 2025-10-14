@@ -19,7 +19,9 @@ fastembed = { workspace = true, optional = true }
 qdrant-client = { workspace = true, optional = true }
 sqlx = { workspace = true, optional = true }
 surrealdb = { workspace = true, optional = true }
+surrealdb-migrations = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
+once_cell = { workspace = true, optional = true }
 
 [features]
 server = [
@@ -28,9 +30,11 @@ server = [
     "dep:chrono",
     "dep:cuid2",
     "dep:fastembed",
+    "dep:once_cell",
     "dep:qdrant-client",
     "dep:sqlx",
     "dep:surrealdb",
+    "dep:surrealdb-migrations",
     "dep:tokio",
 ]
 web = ["schema/web"]
