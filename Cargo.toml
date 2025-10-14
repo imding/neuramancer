@@ -17,8 +17,10 @@ backend = { path = "backend" }
 schema = { path = "schema" }
 ui = { path = "ui" }
 
+# external
 chrono = { version = "0.4.42", features = ["serde"] }
 sqlx = { version = "0.8.6", features = ["chrono", "runtime-tokio", "sqlite"] }
+surrealdb = { version = "2.3.10", features = ["kv-mem"] }
 tokio = { version = "1.48.0", features = ["full"] }
 
 # axum@0.8 is not yet supported by Dioxus
@@ -26,12 +28,14 @@ axum = "0.7.9"
 cfg-if = "1.0.3"
 cuid2 = "0.1.4"
 dioxus = "0.6.3"
+eyre = "0.6.12"
 fastembed = "5.2.0"
 qdrant-client = "1.15.0"
 serde = "1.0.228"
+serde_json = "1.0.145"
 # Use after either wasm in dioxus is compatible with rustc 1.89.0
 # tailwind-rs-dioxus = "*"
-# thiserror = "2.0.17"
+thiserror = "2.0.17"
 
 [profile]
 

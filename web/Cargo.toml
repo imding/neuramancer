@@ -13,8 +13,6 @@ cfg-if.workspace = true
 dioxus = { workspace = true, features = ["router"] }
 
 axum = { workspace = true, optional = true }
-qdrant-client = { workspace = true, optional = true }
-sqlx = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 
 [features]

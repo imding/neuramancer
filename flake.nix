@@ -31,6 +31,14 @@
           ...
         }:
         let
+          pkgs = import inputs.nixpkgs {
+            inherit system;
+            config.allowUnfreePredicate =
+              pkg:
+              builtins.elem (lib.getName pkg) [
+                "surrealdb"
+              ];
+          };
           fenixPkgs = inputs.fenix.packages.${system};
           pinnedRust = fenixPkgs.toolchainOf {
             channel = "1.86.0";
@@ -180,6 +188,7 @@
               git
               helix
               jujutsu
+              # surrealdb
             ];
 
             shellHook = ''

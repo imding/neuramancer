@@ -8,12 +8,14 @@ cfg-if.workspace = true
 chrono.workspace = true
 cuid2.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 
 sqlx = { workspace = true, optional = true }
+surrealdb = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fastembed.workspace = true
 
 [features]
-server = ["dep:sqlx"]
+server = ["dep:sqlx", "dep:surrealdb"]
 web = []
