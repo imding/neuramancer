@@ -1,10 +1,8 @@
 use {
     cfg_if::cfg_if,
     chrono::{DateTime, Utc},
+    serde::{Deserialize, Serialize},
 };
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "server")]
 use sqlx::FromRow;
@@ -18,8 +16,7 @@ cfg_if! {
      }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[cfg_attr(feature = "server", derive(FromRow))]
 pub struct TextNote {
     pub id: String,
@@ -27,16 +24,14 @@ pub struct TextNote {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NoteEmbedding {
     pub note_id: String,
     pub vector: Vec<f32>,
-    #[cfg_attr(feature = "serde", serde(with = "embedding_model_serde"))]
+    #[serde(with = "embedding_model_serde")]
     pub model: EmbeddingModel,
 }
 
-#[cfg(feature = "serde")]
 mod embedding_model_serde {
     use {
         super::*,

@@ -1,7 +1,7 @@
 use {
     dioxus::prelude::*,
     ui::Navbar,
-    views::{Blog, Home, NotFound},
+    views::{Blog, Home, NotFound, Notes},
 };
 
 mod views;
@@ -12,6 +12,8 @@ enum Route {
     #[layout(WebNavbar)]
     #[route("/")]
     Home {},
+    #[route("/notes")]
+    Notes {},
     #[route("/blog/:id")]
     Blog { id: i32 },
     #[route("/:..segments")]
@@ -53,6 +55,10 @@ fn WebNavbar() -> Element {
             Link {
                 to: Route::Home {},
                 "Home"
+            }
+            Link {
+                to: Route::Notes {},
+                "Notes"
             }
             Link {
                 to: Route::Blog { id: 1 },

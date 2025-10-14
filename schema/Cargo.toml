@@ -7,14 +7,13 @@ edition = "2021"
 cfg-if.workspace = true
 chrono.workspace = true
 cuid2.workspace = true
+serde.workspace = true
 
-serde = { workspace = true, optional = true }
 sqlx = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fastembed.workspace = true
 
 [features]
-serde = ["dep:serde"]
 server = ["dep:sqlx"]
 web = []

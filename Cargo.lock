@@ -7291,6 +7291,7 @@ dependencies = [
  "cfg-if",
  "dioxus",
  "qdrant-client",
+ "schema",
  "sqlx",
  "tokio",
  "ui",

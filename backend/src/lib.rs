@@ -1,11 +1,9 @@
-//! This crate contains all shared fullstack server functions.
-use {
-    cfg_if::cfg_if,
-    dioxus::{logger::tracing, prelude::*},
-};
+use {cfg_if::cfg_if, dioxus::prelude::*, schema::TextNote};
 
 cfg_if! {
     if #[cfg(feature = "server")] {
+        use axum::http::StatusCode;
+
         mod qdrant;
         mod server;
         mod sqlx;
@@ -14,24 +12,50 @@ cfg_if! {
     }
 }
 
-/// Echo the user input on the server.
 #[server(Echo)]
 pub async fn echo(input: String) -> Result<String, ServerFnError> {
     Ok(input)
 }
 
 #[server(SaveTextNote)]
-pub async fn save_text_note(content: String) -> Result<bool, ServerFnError> {
+pub async fn save_text_note(content: String) -> Result<TextNote, ServerFnError> {
     let FromContext(state): FromContext<ServerState> = match extract().await {
         Ok(state) => state,
         Err(error) => {
-            tracing::error!("{error}");
-            return Ok(false);
+            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
+
+            return Err(ServerFnError::ServerError(format!("{error}")));
         }
     };
-    let new_note = state.sqlx.create_text_note(&content).await?;
 
-    tracing::debug!("{new_note:?}");
+    match state.sqlx.create_text_note(&content).await {
+        Ok(text_note) => Ok(text_note),
+        Err(error) => {
+            server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
 
-    Ok(true)
+            return Err(ServerFnError::ServerError(format!("{error}")));
+        }
+    }
+}
+
+#[server(ReadTextNotes)]
+pub async fn read_text_notes() -> Result<Vec<TextNote>, ServerFnError> {
+    let FromContext(state): FromContext<ServerState> = match extract().await {
+        Ok(state) => state,
+        Err(error) => {
+            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
+
+            return Err(ServerFnError::ServerError(format!("{error}")));
+        }
+    };
+    let notes = match state.sqlx.read_text_notes().await {
+        Ok(new_note) => new_note,
+        Err(error) => {
+            server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
+
+            return Err(ServerFnError::ServerError(format!("{error}")));
+        }
+    };
+
+    Ok(notes)
 }
