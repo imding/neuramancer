@@ -1,7 +1,8 @@
-use dioxus::prelude::*;
-
-use ui::Navbar;
-use views::{Blog, Home, NotFound};
+use {
+    dioxus::prelude::*,
+    ui::Navbar,
+    views::{Blog, Home, NotFound},
+};
 
 mod views;
 
@@ -21,7 +22,13 @@ const FAVICON: Asset = asset!("/assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 
 fn main() {
+    #[cfg(feature = "web")]
+    // Hydrate the application on the client
     dioxus::launch(App);
+
+    #[cfg(feature = "server")]
+    // Launch axum on the server
+    backend::ServerInstance::launch(App);
 }
 
 #[component]

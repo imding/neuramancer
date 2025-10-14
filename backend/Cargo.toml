@@ -1,0 +1,22 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+schema.workspace = true
+
+dioxus = { workspace = true, features = ["fullstack"] }
+
+cfg-if.workspace = true
+# thiserror.workspace = true
+
+axum = { workspace = true, optional = true }
+fastembed = { workspace = true, optional = true }
+qdrant-client = { workspace = true, optional = true }
+sqlx = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+
+[features]
+web = ["schema/web"]
+server = ["schema/server", "dep:axum", "dep:fastembed", "dep:qdrant-client", "dep:sqlx", "dep:tokio"]

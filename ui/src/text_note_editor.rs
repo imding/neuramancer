@@ -17,7 +17,7 @@ pub fn TextNoteEditor() -> Element {
                     return;
                 };
                 let content = form_value.as_value();
-                let Ok(response) = api::save_text_note(content).await else {
+                let Ok(response) = backend::save_text_note(content).await else {
                     return tracing::error!("Failed to save text note");
                 };
 

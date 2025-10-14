@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-api = { workspace = true, features = ["web"] }
+backend = { workspace = true, features = ["web"] }
 
 schema.workspace = true
 

@@ -1,5 +1,14 @@
 //! This crate contains all shared fullstack server functions.
-use dioxus::prelude::*;
+use {cfg_if::cfg_if, dioxus::prelude::*};
+
+cfg_if! {
+    if #[cfg(feature = "server")] {
+        mod qdrant;
+        mod server;
+
+        pub use {qdrant::*, server::*};
+    }
+}
 
 /// Echo the user input on the server.
 #[server(Echo)]
