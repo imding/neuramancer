@@ -1,5 +1,5 @@
-mod home;
-pub use home::Home;
-
 mod blog;
-pub use blog::Blog;
+mod home;
+mod not_found;
+
+pub use {blog::*, home::*, not_found::*};
