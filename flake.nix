@@ -37,6 +37,7 @@
               pkg:
               builtins.elem (lib.getName pkg) [
                 "surrealdb"
+                # "surrealist"
               ];
           };
           fenixPkgs = inputs.fenix.packages.${system};
@@ -87,7 +88,6 @@
             );
 
             nativeBuildInputs = lib.optionals pkgs.stdenv.isLinux [ pkgs.autoPatchelfHook ];
-            # nativeBuildInputs = [ pkgs.autoPatchelfHook ];
 
             installPhase = ''
               mkdir -p $out/bin
@@ -109,7 +109,7 @@
 
             inherit src;
 
-            # Don't build dependencies separately since dx bundle does everything
+            # Don't build dependencies separately since `dx bundle` does everything
             cargoArtifacts = null;
             doCheck = false;
             doNotPostBuildInstallCargoBinaries = true;
@@ -122,7 +122,11 @@
 
             buildInputs = with pkgs; [
               openssl
+              onnxruntime
             ];
+
+            ORT_STRATEGY = "system";
+            ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
 
             buildPhase = ''
               runHook preBuild
@@ -183,17 +187,22 @@
               # Build dependencies (needed for dx serve/bundle)
               pkg-config
               openssl
+              onnxruntime
 
               # Development tools
               git
               helix
               jujutsu
               # surrealdb
+              # surrealist
+              surrealdb-migrations
             ];
 
             shellHook = ''
               export RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}
               export DISPLAY=:0
+              export ORT_STRATEGY=system
+              export ORT_LIB_LOCATION=${pkgs.onnxruntime}/lib
             '';
           };
         };
