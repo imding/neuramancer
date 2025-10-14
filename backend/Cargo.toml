@@ -12,6 +12,8 @@ cfg-if.workspace = true
 # thiserror.workspace = true
 
 axum = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
+cuid2 = { workspace = true, optional = true }
 fastembed = { workspace = true, optional = true }
 qdrant-client = { workspace = true, optional = true }
 sqlx = { workspace = true, optional = true }
@@ -19,4 +21,14 @@ tokio = { workspace = true, optional = true }
 
 [features]
 web = ["schema/web"]
-server = ["schema/server", "dep:axum", "dep:fastembed", "dep:qdrant-client", "dep:sqlx", "dep:tokio"]
+server = [
+    "schema/serde",
+    "schema/server",
+    "dep:axum",
+    "dep:chrono",
+    "dep:cuid2",
+    "dep:fastembed",
+    "dep:qdrant-client",
+    "dep:sqlx",
+    "dep:tokio",
+]

@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ui.workspace = true
+
 dioxus = { workspace = true, features = ["router"] }
-ui = { workspace = true }
 
 [features]
 default = []

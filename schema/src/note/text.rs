@@ -1,11 +1,17 @@
-use {cfg_if::cfg_if, chrono::NaiveDateTime, uuid::Uuid};
+use {
+    cfg_if::cfg_if,
+    chrono::{DateTime, Utc},
+};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "server")]
+use sqlx::FromRow;
+
 cfg_if! {
      if #[cfg(target_arch = "wasm32")] {
-         use super::embedding_model_wasm32::EmbeddingModel;
+         use {super::embedding_model_wasm32::EmbeddingModel};
      }
      else {
          use fastembed::EmbeddingModel;
@@ -14,16 +20,17 @@ cfg_if! {
 
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "server", derive(FromRow))]
 pub struct TextNote {
-    pub id: Uuid,
+    pub id: String,
     pub content: String,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct NoteEmbedding {
-    pub note_id: Uuid,
+    pub note_id: String,
     pub vector: Vec<f32>,
     #[cfg_attr(feature = "serde", serde(with = "embedding_model_serde"))]
     pub model: EmbeddingModel,

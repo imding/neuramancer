@@ -5,6 +5,7 @@ members = [
     "schema",
     "ui",
 
+    # platform
     "desktop",
     "mobile",
     "web",
@@ -17,13 +18,13 @@ schema = { path = "schema" }
 ui = { path = "ui" }
 
 chrono = { version = "0.4.42", features = ["serde"] }
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite"] }
+sqlx = { version = "0.8.6", features = ["chrono", "runtime-tokio", "sqlite"] }
 tokio = { version = "1.48.0", features = ["full"] }
-uuid = { version = "1.18.1", features = ["serde", "v4"] }
 
 # axum@0.8 is not yet supported by Dioxus
 axum = "0.7.9"
 cfg-if = "1.0.3"
+cuid2 = "0.1.4"
 dioxus = "0.6.3"
 fastembed = "5.2.0"
 qdrant-client = "1.15.0"

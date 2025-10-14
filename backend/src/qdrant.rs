@@ -12,7 +12,7 @@ static COLLECTION: &str = "Neuramancy";
 
 #[derive(Clone)]
 pub struct Qdrant {
-    client: QdrantClient,
+    pub client: QdrantClient,
 }
 
 impl Qdrant {

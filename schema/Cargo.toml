@@ -6,14 +6,15 @@ edition = "2021"
 [dependencies]
 cfg-if.workspace = true
 chrono.workspace = true
+cuid2.workspace = true
 
-uuid = { workspace = true, features = ["js"] }
 serde = { workspace = true, optional = true }
+sqlx = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fastembed.workspace = true
 
 [features]
 serde = ["dep:serde"]
-server = []
+server = ["dep:sqlx"]
 web = []

@@ -28,7 +28,7 @@ fn main() {
 
     #[cfg(feature = "server")]
     // Launch axum on the server
-    backend::ServerInstance::launch(App);
+    backend::ServerInstance::serve(App);
 }
 
 #[component]
