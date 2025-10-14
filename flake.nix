@@ -100,7 +100,14 @@
 
           src = lib.cleanSourceWith {
             src = craneLib.path ./.;
-            filter = path: type: (craneLib.filterCargoSources path type) || (lib.hasInfix "/assets" path);
+            filter =
+              path: type:
+              (craneLib.filterCargoSources path type)
+              || (lib.hasInfix "/assets" path)
+              || (lib.hasInfix "/surreal/migrations" path)
+              || (lib.hasInfix "/surreal/schemas" path)
+              || (lib.hasInfix "/surreal/events" path)
+              || (lib.hasSuffix ".surrealdb" path);
           };
 
           web = craneLib.buildPackage {
@@ -142,11 +149,23 @@
             '';
           };
 
+          migrationFiles = pkgs.runCommand "migration-files" { } ''
+            mkdir -p $out/backend/src/surreal
+            cp -r ${src}/backend/src/surreal/schemas $out/backend/src/surreal/ || true
+            cp -r ${src}/backend/src/surreal/migrations $out/backend/src/surreal/ || true
+            cp -r ${src}/backend/src/surreal/events $out/backend/src/surreal/ || true
+            cp ${src}/.surrealdb $out/.surrealdb
+          '';
+
           web-img = pkgs.dockerTools.streamLayeredImage {
             name = "neuramancy";
             tag = "latest";
             contents = [ web ];
-
+            fakeRootCommands = ''
+              mkdir -p ./backend/src/surreal
+              cp -r ${migrationFiles}/backend/src/surreal/* ./backend/src/surreal/
+              cp ${migrationFiles}/.surrealdb ./.surrealdb
+            '';
             config = {
               Cmd = [ "/server" ];
               Env = [
@@ -159,6 +178,7 @@
               WorkingDir = "/";
             };
           };
+
         in
         {
           packages = {
