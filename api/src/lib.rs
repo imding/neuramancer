@@ -6,3 +6,8 @@ use dioxus::prelude::*;
 pub async fn echo(input: String) -> Result<String, ServerFnError> {
     Ok(input)
 }
+
+#[server(SaveTextNote)]
+pub async fn save_text_note(content: String) -> Result<bool, ServerFnError> {
+    Ok(true)
+}

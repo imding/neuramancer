@@ -1,10 +1,6 @@
-//! This crate contains all shared UI for the workspace.
-
-mod hero;
-pub use hero::Hero;
-
-mod navbar;
-pub use navbar::Navbar;
-
 mod echo;
-pub use echo::Echo;
+mod hero;
+mod navbar;
+mod text_note_editor;
+
+pub use {echo::*, hero::*, navbar::*, text_note_editor::*};

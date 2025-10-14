@@ -1,0 +1,19 @@
+#text-note-editor {
+  width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 50px;
+  background-color: #1e222d;
+  padding: 20px;
+  border-radius: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+#text-note-editor>h4 {
+  margin: 0px 0px 15px 0px;
+}
+
+#text-note-editor-input {
+  min-height: 100px;
+}
