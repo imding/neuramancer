@@ -1,0 +1,8 @@
+[core]
+   path = "./backend/src/surreal"
+   schema = "less"
+
+[db]
+   address = "mem://"
+   ns = "development"
+   db = "neuramancer"
