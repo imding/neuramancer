@@ -1,12 +1,20 @@
 use {
     dioxus::prelude::*,
-    ui::{Hero, TextNoteEditor},
+    ui::{Demo, Hero},
 };
+
+const HOME_CSS: Asset = asset!("/assets/home.css");
 
 #[component]
 pub fn Home() -> Element {
     rsx! {
-        Hero {}
-        TextNoteEditor {}
+        document::Link { rel: "stylesheet", href: HOME_CSS }
+
+        div {
+            id: "home-page",
+
+            Hero {}
+            Demo {}
+        }
     }
 }

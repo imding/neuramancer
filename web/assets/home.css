@@ -1,0 +1,5 @@
+#home-page {
+  display: grid;
+  justify-content: center;
+  gap: 2rem;
+}

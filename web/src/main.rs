@@ -1,15 +1,14 @@
 use {
     dioxus::prelude::*,
-    ui::Navbar,
+    ui::{AppAccess, Header, Navbar},
     views::{Blog, Home, NotFound, Notes},
 };
 
 mod views;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
-#[rustfmt::skip]
 enum Route {
-    #[layout(WebNavbar)]
+    #[layout(MainLayout)]
     #[route("/")]
     Home {},
     #[route("/notes")]
@@ -25,20 +24,15 @@ const MAIN_CSS: Asset = asset!("/assets/main.css");
 
 fn main() {
     #[cfg(feature = "web")]
-    // Hydrate the application on the client
     dioxus::launch(App);
 
     #[cfg(feature = "server")]
-    // Launch axum on the server
     backend::ServerInstance::serve(App);
 }
 
 #[component]
 fn App() -> Element {
-    // Build cool things ✌️
-
     rsx! {
-        // Global app resources
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
 
@@ -46,23 +40,24 @@ fn App() -> Element {
     }
 }
 
-/// A web-specific Router around the shared `Navbar` component
-/// which allows us to use the web-specific `Route` enum.
 #[component]
-fn WebNavbar() -> Element {
+fn MainLayout() -> Element {
     rsx! {
-        Navbar {
-            Link {
-                to: Route::Home {},
-                "Home"
-            }
-            Link {
-                to: Route::Notes {},
-                "Notes"
-            }
-            Link {
-                to: Route::Blog { id: 1 },
-                "Blog"
+        Header {
+            left: rsx! {
+                Navbar {
+                    Link {
+                        to: Route::Home {},
+                        "Home"
+                    }
+                    Link {
+                        to: Route::Blog { id: 1 },
+                        "Blog"
+                    }
+                }
+            },
+            right: rsx! {
+                AppAccess {}
             }
         }
 
