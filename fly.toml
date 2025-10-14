@@ -20,3 +20,10 @@ cpu_kind = 'shared'
 cpus = 1
 memory_mb = 1024
 
+# [checks.health]
+# type = 'http'
+# method = 'GET'
+# path = '/health'
+# port = 8080
+# interval = '5s'
+# timeout = '5s'
