@@ -61,10 +61,15 @@
             version = "0.2.104";
 
             src = pkgs.fetchurl (
-              if pkgs.stdenv.isDarwin then
+              if pkgs.system == "x86_64-darwin" then
                 {
                   url = "https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.104/wasm-bindgen-0.2.104-x86_64-apple-darwin.tar.gz";
                   sha256 = "sha256-+jcFeR7diXNU0msGFvzL24v2o05dhwRAtsY0sAjK1UQ=";
+                }
+              else if pkgs.system == "aarch64-darwin" then
+                {
+                  url = "https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.104/wasm-bindgen-0.2.104-aarch64-apple-darwin.tar.gz";
+                  sha256 = "sha256-FnwN0zZrQsNHXYsvPJdHL+zfmM7UwjT/5qhux0H32tg=";
                 }
               else
                 {
