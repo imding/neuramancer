@@ -1,14 +1,22 @@
-use dioxus::{logger::tracing, prelude::*};
+use {
+    dioxus::{logger::tracing, prelude::*},
+    schema::Note,
+};
 
-const TEXT_NOTE_EDITOR_CSS: Asset = asset!("/assets/styling/text_note_editor.css");
+const NOTE_EDITOR_CSS: Asset = asset!("/assets/styling/note_editor.css");
+
+#[derive(Clone, PartialEq, Props)]
+pub struct NoteEditorProps {
+    handle_edited: Option<Callback<Note>>,
+}
 
 #[component]
-pub fn TextNoteEditor() -> Element {
+pub fn NoteEditor(props: NoteEditorProps) -> Element {
     rsx! {
-        document::Link { rel: "stylesheet", href: TEXT_NOTE_EDITOR_CSS }
+        document::Link { rel: "stylesheet", href: NOTE_EDITOR_CSS }
 
         form {
-            id: "text-note-editor",
+            id: "note-editor",
             onsubmit: move |event| async move {
                 event.prevent_default();
 
@@ -20,7 +28,7 @@ pub fn TextNoteEditor() -> Element {
 
                 match backend::save_note(content).await {
                     Ok(note) => {
-                        tracing::debug!("{note:?}");
+                        props.handle_edited.unwrap_or_default().call(note);
                     },
                     Err(error) => {
                         tracing::error!("{error:?}");
@@ -28,15 +36,15 @@ pub fn TextNoteEditor() -> Element {
                 };
             },
 
-            h4 { "Text Note Editor" }
+            h4 { "Note Editor" }
 
             textarea {
-                id: "text-note-editor-input",
+                id: "note-editor-input",
                 name: "content"
             }
 
             input {
-                id: "text-note-editor-save-button",
+                id: "note-editor-save-button",
                 r#type: "submit"
             }
         }

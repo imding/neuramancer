@@ -3,13 +3,13 @@ use dioxus::prelude::*;
 const APP_ACCESS_CSS: Asset = asset!("/assets/styling/app_access.css");
 
 #[derive(Clone, PartialEq, Props)]
-pub struct Props_ {
+pub struct AppAccessProps {
     handle_log_in: Option<EventHandler<MouseEvent>>,
     handle_free_trial: Option<EventHandler<MouseEvent>>,
 }
 
 #[component]
-pub fn AppAccess(props: Props_) -> Element {
+pub fn AppAccess(props: AppAccessProps) -> Element {
     rsx! {
         document::Link { rel: "stylesheet", href: APP_ACCESS_CSS }
 
