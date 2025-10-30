@@ -1,6 +1,6 @@
 mod blog;
 mod home;
+mod knowledge_space;
 mod not_found;
-mod notes;
 
-pub use {blog::*, home::*, not_found::*, notes::*};
+pub use {blog::*, home::*, knowledge_space::*, not_found::*};

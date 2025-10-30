@@ -1,7 +1,7 @@
 use {
-    dioxus::prelude::*,
+    dioxus::{logger::tracing, prelude::*},
     ui::{AppAccess, Header, Navbar},
-    views::{Blog, Home, NotFound, Notes},
+    views::{Blog, Home, KnowledgeSpace, NotFound},
 };
 
 mod views;
@@ -11,10 +11,10 @@ enum Route {
     #[layout(MainLayout)]
     #[route("/")]
     Home {},
-    #[route("/notes")]
-    Notes {},
     #[route("/blog/:id")]
     Blog { id: i32 },
+    #[route("/knowledge-space")]
+    KnowledgeSpace {},
     #[route("/:..segments")]
     NotFound { segments: Vec<String> },
 }
@@ -42,6 +42,8 @@ fn App() -> Element {
 
 #[component]
 fn MainLayout() -> Element {
+    let navigation = navigator();
+
     rsx! {
         Header {
             left: rsx! {
@@ -57,7 +59,12 @@ fn MainLayout() -> Element {
                 }
             },
             right: rsx! {
-                AppAccess {}
+                AppAccess {
+                    handle_log_in: move |_| tracing::debug!("Log in"),
+                    handle_free_trial: move |_| {
+                        navigation.push(Route::KnowledgeSpace {});
+                    },
+                }
             }
         }
 

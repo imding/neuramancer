@@ -1,6 +1,8 @@
 #header {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr min-content 1fr;
   align-items: center;
   width: 100vw;
+  z-index: 99;
 }
