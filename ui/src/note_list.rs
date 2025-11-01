@@ -2,18 +2,28 @@ use {crate::Note, dioxus::prelude::*};
 
 #[component]
 pub fn NoteList() -> Element {
-    // let notes = use_server_future(move || backend::read_notes())?;
+    let notes = use_resource(move || backend::read_notes());
 
     rsx! {
         div {
             id: "note-list",
 
-            // for (index, note) in notes().unwrap().unwrap().iter().enumerate() {
-            //     Note {
-            //         key: "note-{index}",
-            //         note: note.clone()
-            //     }
-            // }
+            match notes() {
+                Some(Ok(notes)) => rsx! {
+                    for (index, note) in notes.iter().enumerate() {
+                        Note {
+                            key: "note-{index}",
+                            note: note.clone()
+                        }
+                    }
+                },
+                Some(Err(error)) => rsx! {
+                    p { "Error: {error}" }
+                },
+                _ => rsx! {
+                    p { "Loading..." }
+                }
+            }
         }
     }
 }

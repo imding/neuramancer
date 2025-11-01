@@ -1,9 +1,4 @@
-use {
-    crate::{Qdrant, SqliteInMemory, SurrealInMemory},
-    dioxus::prelude::*,
-    once_cell::sync::Lazy,
-    tokio::runtime::Runtime,
-};
+use {crate::SurrealInMemory, dioxus::prelude::*, once_cell::sync::Lazy, tokio::runtime::Runtime};
 
 static RUNTIME: Lazy<Runtime> =
     Lazy::new(|| Runtime::new().expect("Tokio runtime should lazily initialise."));
@@ -15,22 +10,22 @@ pub struct ServerInstance;
 
 #[derive(Clone)]
 pub struct ServerState {
-    pub sqlx: SqliteInMemory,
-    pub qdrant: Qdrant,
+    // pub sqlx: SqliteInMemory,
+    // pub qdrant: Qdrant,
     pub surreal: SurrealInMemory,
 }
 
 impl ServerState {
     pub async fn new() -> Self {
         ServerState {
-            sqlx: match SqliteInMemory::new().await {
-                Ok(sqlx) => sqlx,
-                Err(error) => panic!("{error:?}"),
-            },
-            qdrant: match Qdrant::new(None, Some("http://localhost:6334")).await {
-                Ok(qdrant) => qdrant,
-                Err(error) => panic!("{error:?}"),
-            },
+            // sqlx: match SqliteInMemory::new().await {
+            //     Ok(sqlx) => sqlx,
+            //     Err(error) => panic!("{error:?}"),
+            // },
+            // qdrant: match Qdrant::new(None, Some("http://localhost:6334")).await {
+            //     Ok(qdrant) => qdrant,
+            //     Err(error) => panic!("{error:?}"),
+            // },
             surreal: match SurrealInMemory::init().await {
                 Ok(surreal) => surreal,
                 Err(error) => panic!("{error:?}"),
