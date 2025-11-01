@@ -1,7 +1,7 @@
 use {
     crate::SurrealService,
     eyre::Result,
-    schema::{Note, SnippetData, SurrealRecord},
+    schema::{Knot, Note, SnippetData, SurrealRecord},
     surrealdb::{
         Error as SurrealError, Surreal,
         engine::local::{Db, Mem},
@@ -89,5 +89,155 @@ impl SurrealService for SurrealInMemory {
         }
 
         Ok(notes)
+    }
+
+    async fn delete_note(&self, id: String) -> Result<(), Self::Error> {
+        let mut response = self
+            .client
+            .query("BEGIN")
+            .query("DELETE FROM contain WHERE in = type::thing('note', $id)")
+            .bind(("id", id.clone()))
+            .query("DELETE FROM note WHERE id = type::thing('note', $id)")
+            .bind(("id", id.clone()))
+            .query("COMMIT")
+            .await?;
+
+        // Check if the note was actually deleted by querying the result
+        let deleted_records: Option<Vec<surrealdb::sql::Value>> = response.take(2)?;
+        match deleted_records {
+            Some(records) if records.is_empty() => {
+                Err(SurrealError::Db(DbError::TbNotFound {
+                    name: format!("note:{}", id),
+                }))
+            }
+            _ => Ok(()),
+        }
+    }
+
+    async fn create_knot(
+        &self,
+        knot_ids: Vec<String>,
+        note_ids: Vec<String>,
+        intent: String,
+    ) -> Result<Knot, Self::Error> {
+        let mut draft = self
+            .client
+            .query("BEGIN")
+            .query("LET $knot = CREATE knot SET intent = $intent")
+            .bind(("intent", intent));
+
+        // Validate that all provided note IDs exist
+        for (idx, note_id) in note_ids.iter().enumerate() {
+            draft = draft
+                .query(format!("LET $note{idx} = SELECT * FROM type::thing('note', $note_id{idx})"))
+                .bind((format!("note_id{idx}"), note_id.clone()))
+                .query(format!("IF array::len($note{idx}) == 0 {{ THROW 'Note not found: ' + $note_id{idx} }}"));
+        }
+
+        // Validate that all provided knot IDs exist
+        for (idx, knot_id) in knot_ids.iter().enumerate() {
+            draft = draft
+                .query(format!("LET $existing_knot{idx} = SELECT * FROM type::thing('knot', $knot_id{idx})"))
+                .bind((format!("knot_id{idx}"), knot_id.clone()))
+                .query(format!("IF array::len($existing_knot{idx}) == 0 {{ THROW 'Knot not found: ' + $knot_id{idx} }}"));
+        }
+
+        // Create converge relationships for notes
+        for (idx, note_id) in note_ids.iter().enumerate() {
+            draft = draft
+                .query(format!("RELATE type::thing('note', $note_id{idx})->converge->$knot SET intent = $intent"))
+                .bind((format!("note_id{idx}"), note_id.clone()));
+        }
+
+        // Create converge relationships for knots
+        for (idx, knot_id) in knot_ids.iter().enumerate() {
+            draft = draft
+                .query(format!("RELATE type::thing('knot', $knot_id{idx})->converge->$knot SET intent = $intent"))
+                .bind((format!("knot_id{idx}"), knot_id.clone()));
+        }
+
+        let mut response = draft
+            .query("LET $result = (SELECT *, <-converge<-note AS notes, <-converge<-knot AS knots FROM $knot FETCH notes, knots)[0]")
+            .query("RETURN $result")
+            .query("COMMIT")
+            .await?;
+
+        let maybe_knot: Option<Knot> = response.take(0)?;
+
+        match maybe_knot {
+            Some(mut knot) => {
+                knot.put_id();
+                Ok(knot)
+            }
+            _ => Err(SurrealError::Db(DbError::TbNotFound {
+                name: "knot".to_string(),
+            })),
+        }
+    }
+
+    async fn read_knots(&self) -> Result<Vec<Knot>, Self::Error> {
+        let mut response = self
+            .client
+            .query("SELECT *, <-converge<-note AS notes, <-converge<-knot AS knots FROM knot FETCH notes, knots")
+            .await?;
+        let mut knots: Vec<Knot> = response.take(0)?;
+
+        for knot in knots.iter_mut() {
+            knot.put_id();
+        }
+
+        Ok(knots)
+    }
+
+    async fn delete_knot(&self, id: String, recursive: bool) -> Result<(), Self::Error> {
+        if recursive {
+            // Recursive deletion: delete all notes and knots that converge into this knot
+            let mut response = self
+                .client
+                .query("BEGIN")
+                .query("LET $knot_to_delete = type::thing('knot', $id)")
+                .bind(("id", id.clone()))
+                .query("LET $converging_notes = SELECT VALUE in FROM converge WHERE out = $knot_to_delete AND type::is::record(in, 'note')")
+                .query("LET $converging_knots = SELECT VALUE in FROM converge WHERE out = $knot_to_delete AND type::is::record(in, 'knot')")
+                .query("FOR $note IN $converging_notes { DELETE FROM contain WHERE in = $note; DELETE $note }")
+                .query("FOR $knot IN $converging_knots { DELETE FROM converge WHERE out = $knot; DELETE $knot }")
+                .query("DELETE FROM converge WHERE out = $knot_to_delete")
+                .query("DELETE $knot_to_delete")
+                .query("COMMIT")
+                .await?;
+
+            // Check if the knot was actually deleted by querying the result
+            let deleted_records: Option<Vec<surrealdb::sql::Value>> = response.take(7)?;
+            match deleted_records {
+                Some(records) if records.is_empty() => {
+                    Err(SurrealError::Db(DbError::TbNotFound {
+                        name: format!("knot:{}", id),
+                    }))
+                }
+                _ => Ok(()),
+            }
+        } else {
+            // Non-recursive deletion: only delete the specified knot
+            let mut response = self
+                .client
+                .query("BEGIN")
+                .query("DELETE FROM converge WHERE out = type::thing('knot', $id)")
+                .bind(("id", id.clone()))
+                .query("DELETE FROM knot WHERE id = type::thing('knot', $id)")
+                .bind(("id", id.clone()))
+                .query("COMMIT")
+                .await?;
+
+            // Check if the knot was actually deleted by querying the result
+            let deleted_records: Option<Vec<surrealdb::sql::Value>> = response.take(2)?;
+            match deleted_records {
+                Some(records) if records.is_empty() => {
+                    Err(SurrealError::Db(DbError::TbNotFound {
+                        name: format!("knot:{}", id),
+                    }))
+                }
+                _ => Ok(()),
+            }
+        }
     }
 }

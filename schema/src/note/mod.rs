@@ -1,15 +1,10 @@
-mod audio;
 mod embedding_model_wasm32;
-mod text;
-mod video;
 
 use {
     crate::SurrealRecord,
     derive::PutId,
     serde::{Deserialize, Serialize},
 };
-
-pub use text::*;
 
 #[cfg(feature = "server")]
 use surrealdb::RecordId;

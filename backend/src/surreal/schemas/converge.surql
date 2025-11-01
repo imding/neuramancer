@@ -1,4 +1,6 @@
 DEFINE TABLE converge TYPE RELATION IN note | knot OUT knot SCHEMAFULL PERMISSIONS NONE;
 
+DEFINE FIELD intent ON converge TYPE string PERMISSIONS FULL;
+
 -- DEFINE FIELD in ON converge TYPE record<note | knot> PERMISSIONS FULL;
 -- DEFINE FIELD out ON converge TYPE record<knot> PERMISSIONS FULL;

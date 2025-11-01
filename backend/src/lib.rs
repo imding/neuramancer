@@ -1,7 +1,7 @@
 use {
     cfg_if::cfg_if,
     dioxus::{logger::tracing, prelude::*},
-    schema::{Note, SnippetData},
+    schema::{Knot, Note, SnippetData},
 };
 
 cfg_if! {
@@ -69,4 +69,115 @@ pub async fn read_notes() -> Result<Vec<Note>, ServerFnError> {
     };
 
     Ok(notes)
+}
+
+#[server(DeleteNote)]
+pub async fn delete_note(id: String) -> Result<(), ServerFnError> {
+    let FromContext(state): FromContext<ServerState> = match extract().await {
+        Ok(state) => state,
+        Err(error) => {
+            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
+
+            return Err(ServerFnError::ServerError(format!("{error}")));
+        }
+    };
+
+    match state.surreal.delete_note(id.clone()).await {
+        Ok(()) => {
+            tracing::debug!("Successfully deleted note with id: {}", id);
+            Ok(())
+        }
+        Err(error) => {
+            server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
+
+            Err(ServerFnError::ServerError(format!("Failed to delete note {}: {}", id, error)))
+        }
+    }
+}
+
+#[server(CreateKnot)]
+pub async fn create_knot(knot_ids: Vec<String>, note_ids: Vec<String>, intent: String) -> Result<Knot, ServerFnError> {
+    let FromContext(state): FromContext<ServerState> = match extract().await {
+        Ok(state) => state,
+        Err(error) => {
+            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
+
+            return Err(ServerFnError::ServerError(format!("{error}")));
+        }
+    };
+
+    // Validate input parameters
+    if knot_ids.is_empty() && note_ids.is_empty() {
+        server_context().response_parts_mut().status = StatusCode::BAD_REQUEST;
+        return Err(ServerFnError::ServerError(
+            "At least one knot ID or note ID must be provided".to_string(),
+        ));
+    }
+
+    if intent.trim().is_empty() {
+        server_context().response_parts_mut().status = StatusCode::BAD_REQUEST;
+        return Err(ServerFnError::ServerError(
+            "Intent cannot be empty".to_string(),
+        ));
+    }
+
+    match state.surreal.create_knot(knot_ids, note_ids, intent.clone()).await {
+        Ok(knot) => {
+            tracing::debug!("Successfully created knot with intent: {}", intent);
+            Ok(knot)
+        }
+        Err(error) => {
+            server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
+
+            Err(ServerFnError::ServerError(format!("Failed to create knot: {}", error)))
+        }
+    }
+}
+
+#[server(ReadKnots)]
+pub async fn read_knots() -> Result<Vec<Knot>, ServerFnError> {
+    let FromContext(state): FromContext<ServerState> = match extract().await {
+        Ok(state) => state,
+        Err(error) => {
+            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
+
+            return Err(ServerFnError::ServerError(format!("{error}")));
+        }
+    };
+
+    match state.surreal.read_knots().await {
+        Ok(knots) => {
+            tracing::debug!("Successfully retrieved {} knots", knots.len());
+            Ok(knots)
+        }
+        Err(error) => {
+            server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
+
+            Err(ServerFnError::ServerError(format!("Failed to read knots: {}", error)))
+        }
+    }
+}
+
+#[server(DeleteKnot)]
+pub async fn delete_knot(id: String, recursive: bool) -> Result<(), ServerFnError> {
+    let FromContext(state): FromContext<ServerState> = match extract().await {
+        Ok(state) => state,
+        Err(error) => {
+            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
+
+            return Err(ServerFnError::ServerError(format!("{error}")));
+        }
+    };
+
+    match state.surreal.delete_knot(id.clone(), recursive).await {
+        Ok(()) => {
+            tracing::debug!("Successfully deleted knot with id: {} (recursive: {})", id, recursive);
+            Ok(())
+        }
+        Err(error) => {
+            server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
+
+            Err(ServerFnError::ServerError(format!("Failed to delete knot {}: {}", id, error)))
+        }
+    }
 }

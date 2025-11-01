@@ -1,0 +1,171 @@
+#knot-editor {
+  width: 480px;
+  background-color: #1e222d;
+  padding: 20px;
+  border-radius: 10px;
+  display: grid;
+  gap: 16px;
+}
+
+#knot-editor > h4 {
+  margin: 0px 0px 15px 0px;
+  color: white;
+}
+
+.form-group {
+  display: grid;
+  gap: 8px;
+}
+
+.form-group label {
+  color: white;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+#intent-input {
+  min-height: 80px;
+  padding: 8px;
+  border: 1px solid #444;
+  background-color: #2a2e3a;
+  color: white;
+  border-radius: 4px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+#intent-input:focus {
+  outline: none;
+  border-color: #6d85c6;
+}
+
+#intent-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-row input {
+  padding: 8px;
+  border: 1px solid #444;
+  background-color: #2a2e3a;
+  color: white;
+  border-radius: 4px;
+}
+
+.input-row input:focus {
+  outline: none;
+  border-color: #6d85c6;
+}
+
+.input-row input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.add-button {
+  padding: 8px 16px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+  justify-self: start;
+}
+
+.add-button:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.add-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.remove-button {
+  padding: 6px 12px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.remove-button:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.remove-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.cancel-button {
+  padding: 10px 16px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-button {
+  padding: 10px 16px;
+  background-color: #6d85c6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.save-button:hover:not(:disabled) {
+  background-color: #5a73b3;
+}
+
+.save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message {
+  padding: 12px;
+  background-color: #dc3545;
+  color: white;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.empty-state {
+  color: #888;
+  font-style: italic;
+  font-size: 14px;
+  margin: 8px 0;
+}
