@@ -7,8 +7,7 @@ pub fn Header(left: Element, right: Element) -> Element {
     rsx! {
         document::Link { rel: "stylesheet", href: HEADER_CSS }
 
-        div {
-            id: "header",
+        div { id: "header",
 
             {left}
 

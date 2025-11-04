@@ -10,8 +10,7 @@ pub fn Home() -> Element {
     rsx! {
         document::Link { rel: "stylesheet", href: HOME_CSS }
 
-        div {
-            id: "home-page",
+        div { id: "home-page",
 
             Hero {}
             Demo {}

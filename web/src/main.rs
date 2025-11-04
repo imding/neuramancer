@@ -48,14 +48,8 @@ fn MainLayout() -> Element {
         Header {
             left: rsx! {
                 Navbar {
-                    Link {
-                        to: Route::Home {},
-                        "Home"
-                    }
-                    Link {
-                        to: Route::Blog { id: 1 },
-                        "Blog"
-                    }
+                    Link { to: Route::Home {}, "Home" }
+                    Link { to: Route::Blog { id: 1 }, "Blog" }
                 }
             },
             right: rsx! {
@@ -65,7 +59,7 @@ fn MainLayout() -> Element {
                         navigation.push(Route::KnowledgeSpace {});
                     },
                 }
-            }
+            },
         }
 
         Outlet::<Route> {}

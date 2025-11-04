@@ -19,17 +19,15 @@ pub fn NoteEditor(props: NoteEditorProps) -> Element {
             id: "note-editor",
             onsubmit: move |event| async move {
                 event.prevent_default();
-
                 let values = event.data().values();
                 let Some(form_value) = values.get("content") else {
                     return;
                 };
                 let content = form_value.as_value();
-
                 match backend::save_note(content).await {
                     Ok(note) => {
                         props.handle_edited.unwrap_or_default().call(note);
-                    },
+                    }
                     Err(error) => {
                         tracing::error!("{error:?}");
                     }
@@ -38,15 +36,9 @@ pub fn NoteEditor(props: NoteEditorProps) -> Element {
 
             h4 { "Note Editor" }
 
-            textarea {
-                id: "note-editor-input",
-                name: "content"
-            }
+            textarea { id: "note-editor-input", name: "content" }
 
-            input {
-                id: "note-editor-save-button",
-                r#type: "submit"
-            }
+            input { id: "note-editor-save-button", r#type: "submit" }
         }
     }
 }

@@ -5,16 +5,12 @@ pub fn NoteList() -> Element {
     let notes = use_resource(move || backend::read_notes());
 
     rsx! {
-        div {
-            id: "note-list",
+        div { id: "note-list",
 
             match notes() {
                 Some(Ok(notes)) => rsx! {
-                    for (index, note) in notes.iter().enumerate() {
-                        Note {
-                            key: "note-{index}",
-                            note: note.clone()
-                        }
+                    for (index , note) in notes.iter().enumerate() {
+                        Note { key: "note-{index}", note: note.clone() }
                     }
                 },
                 Some(Err(error)) => rsx! {
@@ -22,7 +18,7 @@ pub fn NoteList() -> Element {
                 },
                 _ => rsx! {
                     p { "Loading..." }
-                }
+                },
             }
         }
     }

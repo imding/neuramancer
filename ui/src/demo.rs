@@ -7,8 +7,6 @@ pub fn Demo() -> Element {
     rsx! {
         document::Link { rel: "stylesheet", href: DEMO_CSS }
 
-        div {
-            id: "demo",
-        }
+        div { id: "demo" }
     }
 }
