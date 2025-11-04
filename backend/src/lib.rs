@@ -11,15 +11,11 @@ cfg_if! {
     if #[cfg(feature = "server")] {
         use axum::http::StatusCode;
 
-        mod qdrant;
         mod server;
-        mod sqlx;
         mod surreal;
 
         pub use {
-            qdrant::*,
             server::*,
-            sqlx::*,
             surreal::*,
         };
     }

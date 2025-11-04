@@ -1,5 +1,3 @@
-mod embedding_model_wasm32;
-
 use {
     crate::SurrealRecord,
     derive::PutId,
