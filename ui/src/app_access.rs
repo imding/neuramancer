@@ -13,8 +13,7 @@ pub fn AppAccess(props: AppAccessProps) -> Element {
     rsx! {
         document::Link { rel: "stylesheet", href: APP_ACCESS_CSS }
 
-        div {
-            id: "app-access",
+        div { id: "app-access",
 
             button {
                 id: "log-in",

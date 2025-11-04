@@ -17,16 +17,14 @@ pub trait SurrealService {
 
     fn read_notes(&self) -> impl Future<Output = Result<Vec<Note>, Self::Error>> + Send;
 
-    fn delete_note(
-        &self,
-        id: String,
-    ) -> impl Future<Output = Result<(), Self::Error>> + Send;
+    fn delete_note(&self, id: String) -> impl Future<Output = Result<(), Self::Error>> + Send;
 
     fn create_knot(
         &self,
-        knot_ids: Vec<String>,
-        note_ids: Vec<String>,
+        label: String,
         intent: String,
+        note_ids: Vec<String>,
+        knot_ids: Vec<String>,
     ) -> impl Future<Output = Result<Knot, Self::Error>> + Send;
 
     fn read_knots(&self) -> impl Future<Output = Result<Vec<Knot>, Self::Error>> + Send;

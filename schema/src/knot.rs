@@ -12,6 +12,7 @@ pub struct Knot {
     #[cfg(feature = "server")]
     pub id: RecordId,
     pub id_: Option<String>,
+    pub label: String,
     pub intent: String,
     #[put_ids]
     pub notes: Vec<Note>,

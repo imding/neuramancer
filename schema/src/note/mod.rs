@@ -57,5 +57,6 @@ pub struct Note {
     pub id: RecordId,
     pub id_: Option<String>,
     #[put_ids]
+    #[serde(default)]
     pub snippets: Vec<Snippet>,
 }

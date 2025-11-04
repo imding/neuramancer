@@ -1,6 +1,9 @@
 use {
     cfg_if::cfg_if,
-    dioxus::{logger::tracing, prelude::*},
+    dioxus::{
+        logger::tracing,
+        prelude::{server_fn::codec::Json, *},
+    },
     schema::{Knot, Note, SnippetData},
 };
 
@@ -90,13 +93,20 @@ pub async fn delete_note(id: String) -> Result<(), ServerFnError> {
         Err(error) => {
             server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
 
-            Err(ServerFnError::ServerError(format!("Failed to delete note {}: {}", id, error)))
+            Err(ServerFnError::ServerError(format!(
+                "Failed to delete note {id}: {error}"
+            )))
         }
     }
 }
 
-#[server(CreateKnot)]
-pub async fn create_knot(knot_ids: Vec<String>, note_ids: Vec<String>, intent: String) -> Result<Knot, ServerFnError> {
+#[server(CreateKnot, input = Json)]
+pub async fn create_knot(
+    label: String,
+    intent: String,
+    note_ids: Vec<String>,
+    knot_ids: Vec<String>,
+) -> Result<Knot, ServerFnError> {
     let FromContext(state): FromContext<ServerState> = match extract().await {
         Ok(state) => state,
         Err(error) => {
@@ -114,6 +124,13 @@ pub async fn create_knot(knot_ids: Vec<String>, note_ids: Vec<String>, intent: S
         ));
     }
 
+    if label.trim().is_empty() {
+        server_context().response_parts_mut().status = StatusCode::BAD_REQUEST;
+        return Err(ServerFnError::ServerError(
+            "Label cannot be empty".to_string(),
+        ));
+    }
+
     if intent.trim().is_empty() {
         server_context().response_parts_mut().status = StatusCode::BAD_REQUEST;
         return Err(ServerFnError::ServerError(
@@ -121,15 +138,17 @@ pub async fn create_knot(knot_ids: Vec<String>, note_ids: Vec<String>, intent: S
         ));
     }
 
-    match state.surreal.create_knot(knot_ids, note_ids, intent.clone()).await {
-        Ok(knot) => {
-            tracing::debug!("Successfully created knot with intent: {}", intent);
-            Ok(knot)
-        }
+    match state
+        .surreal
+        .create_knot(label.clone(), intent.clone(), note_ids, knot_ids)
+        .await
+    {
+        Ok(knot) => Ok(knot),
         Err(error) => {
             server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
 
-            Err(ServerFnError::ServerError(format!("Failed to create knot: {}", error)))
+            tracing::debug!("{error}");
+            Err(ServerFnError::ServerError(error.to_string()))
         }
     }
 }
@@ -141,19 +160,18 @@ pub async fn read_knots() -> Result<Vec<Knot>, ServerFnError> {
         Err(error) => {
             server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
 
+            tracing::error!("{error}");
             return Err(ServerFnError::ServerError(format!("{error}")));
         }
     };
 
     match state.surreal.read_knots().await {
-        Ok(knots) => {
-            tracing::debug!("Successfully retrieved {} knots", knots.len());
-            Ok(knots)
-        }
+        Ok(knots) => Ok(knots),
         Err(error) => {
             server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
 
-            Err(ServerFnError::ServerError(format!("Failed to read knots: {}", error)))
+            tracing::error!("{error}");
+            Err(ServerFnError::ServerError(error.to_string()))
         }
     }
 }
@@ -171,13 +189,19 @@ pub async fn delete_knot(id: String, recursive: bool) -> Result<(), ServerFnErro
 
     match state.surreal.delete_knot(id.clone(), recursive).await {
         Ok(()) => {
-            tracing::debug!("Successfully deleted knot with id: {} (recursive: {})", id, recursive);
+            tracing::debug!(
+                "Successfully deleted knot with id: {} (recursive: {})",
+                id,
+                recursive
+            );
             Ok(())
         }
         Err(error) => {
             server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
 
-            Err(ServerFnError::ServerError(format!("Failed to delete knot {}: {}", id, error)))
+            Err(ServerFnError::ServerError(format!(
+                "Failed to delete knot {id}: {error}"
+            )))
         }
     }
 }

@@ -1,15 +1,16 @@
-#graph-editor-wrapper {
-  background: transparent;
-  border: none;
-}
-
 #graph-editor {
   width: 480px;
   background-color: #1e222d;
   padding: 20px;
   border-radius: 10px;
-  display: grid;
   gap: 16px;
+  /* Popover styles */
+  border: none;
+}
+
+/* Only apply grid layout when popover is open */
+#graph-editor:popover-open {
+  display: grid;
 }
 
 #graph-editor > h4 {
@@ -52,23 +53,26 @@
 .note-item, .knot-item {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 12px;
+  grid-template-rows: auto auto auto;
+  gap: 4px 12px;
   padding: 12px;
   background-color: #2a2e3a;
   border-radius: 6px;
   margin-bottom: 8px;
-  align-items: center;
+  align-items: start;
 }
 
-.note-content, .knot-content {
-  display: grid;
-  gap: 4px;
-}
-
-.note-content p, .knot-content p {
+.note-item p, .knot-item p {
   margin: 0;
   color: #ccc;
   font-size: 14px;
+  grid-column: 1;
+}
+
+.note-item .delete-button, .knot-item .delete-button {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  align-self: center;
 }
 
 .knot-intent {

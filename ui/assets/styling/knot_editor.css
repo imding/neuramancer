@@ -7,6 +7,14 @@
   gap: 16px;
 }
 
+/* When KnotEditor is inside GraphEditor, adjust sizing */
+#graph-editor #knot-editor {
+  width: 100%;
+  padding: 0;
+  background-color: transparent;
+  border-radius: 0;
+}
+
 #knot-editor > h4 {
   margin: 0px 0px 15px 0px;
   color: white;

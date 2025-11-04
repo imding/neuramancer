@@ -1,5 +1,6 @@
 use {
     crate::SurrealService,
+    dioxus::logger::tracing,
     eyre::Result,
     schema::{Knot, Note, SnippetData, SurrealRecord},
     surrealdb::{
@@ -105,33 +106,37 @@ impl SurrealService for SurrealInMemory {
         // Check if the note was actually deleted by querying the result
         let deleted_records: Option<Vec<surrealdb::sql::Value>> = response.take(2)?;
         match deleted_records {
-            Some(records) if records.is_empty() => {
-                Err(SurrealError::Db(DbError::TbNotFound {
-                    name: format!("note:{}", id),
-                }))
-            }
+            Some(records) if records.is_empty() => Err(SurrealError::Db(DbError::TbNotFound {
+                name: format!("note:{}", id),
+            })),
             _ => Ok(()),
         }
     }
 
     async fn create_knot(
         &self,
-        knot_ids: Vec<String>,
-        note_ids: Vec<String>,
+        label: String,
         intent: String,
+        note_ids: Vec<String>,
+        knot_ids: Vec<String>,
     ) -> Result<Knot, Self::Error> {
         let mut draft = self
             .client
             .query("BEGIN")
-            .query("LET $knot = CREATE knot SET intent = $intent")
+            .query("LET $knot = CREATE knot SET label = $label, intent = $intent")
+            .bind(("label", label))
             .bind(("intent", intent));
 
         // Validate that all provided note IDs exist
         for (idx, note_id) in note_ids.iter().enumerate() {
             draft = draft
-                .query(format!("LET $note{idx} = SELECT * FROM type::thing('note', $note_id{idx})"))
+                .query(format!(
+                    "LET $note{idx} = SELECT * FROM type::thing('note', $note_id{idx})"
+                ))
                 .bind((format!("note_id{idx}"), note_id.clone()))
-                .query(format!("IF array::len($note{idx}) == 0 {{ THROW 'Note not found: ' + $note_id{idx} }}"));
+                .query(format!(
+                    "IF array::len($note{idx}) == 0 {{ THROW 'Note not found: ' + $note_id{idx} }}"
+                ));
         }
 
         // Validate that all provided knot IDs exist
@@ -145,24 +150,37 @@ impl SurrealService for SurrealInMemory {
         // Create converge relationships for notes
         for (idx, note_id) in note_ids.iter().enumerate() {
             draft = draft
-                .query(format!("RELATE type::thing('note', $note_id{idx})->converge->$knot SET intent = $intent"))
-                .bind((format!("note_id{idx}"), note_id.clone()));
+                .query(format!(
+                    "LET $note_record{idx} = type::thing('note', $note_id{idx})"
+                ))
+                .bind((format!("note_id{idx}"), note_id.clone()))
+                .query(format!("RELATE $note_record{idx}->converge->$knot"));
         }
 
         // Create converge relationships for knots
         for (idx, knot_id) in knot_ids.iter().enumerate() {
             draft = draft
-                .query(format!("RELATE type::thing('knot', $knot_id{idx})->converge->$knot SET intent = $intent"))
-                .bind((format!("knot_id{idx}"), knot_id.clone()));
+                .query(format!(
+                    "LET $knot_record{idx} = type::thing('knot', $knot_id{idx})"
+                ))
+                .bind((format!("knot_id{idx}"), knot_id.clone()))
+                .query(format!("RELATE $knot_record{idx}->converge->$knot"));
         }
 
         let mut response = draft
-            .query("LET $result = (SELECT *, <-converge<-note AS notes, <-converge<-knot AS knots FROM $knot FETCH notes, knots)[0]")
-            .query("RETURN $result")
+            .query(
+                "SELECT *,
+                    <-converge<-note AS notes,
+                    <-converge<-knot AS knots
+                FROM $knot FETCH notes, knots",
+            )
             .query("COMMIT")
             .await?;
 
-        let maybe_knot: Option<Knot> = response.take(0)?;
+        tracing::debug!("{response:?}");
+
+        let knots: Vec<Knot> = response.take(0)?;
+        let maybe_knot = knots.into_iter().next();
 
         match maybe_knot {
             Some(mut knot) => {
@@ -209,11 +227,9 @@ impl SurrealService for SurrealInMemory {
             // Check if the knot was actually deleted by querying the result
             let deleted_records: Option<Vec<surrealdb::sql::Value>> = response.take(7)?;
             match deleted_records {
-                Some(records) if records.is_empty() => {
-                    Err(SurrealError::Db(DbError::TbNotFound {
-                        name: format!("knot:{}", id),
-                    }))
-                }
+                Some(records) if records.is_empty() => Err(SurrealError::Db(DbError::TbNotFound {
+                    name: format!("knot:{id}"),
+                })),
                 _ => Ok(()),
             }
         } else {
@@ -231,11 +247,9 @@ impl SurrealService for SurrealInMemory {
             // Check if the knot was actually deleted by querying the result
             let deleted_records: Option<Vec<surrealdb::sql::Value>> = response.take(2)?;
             match deleted_records {
-                Some(records) if records.is_empty() => {
-                    Err(SurrealError::Db(DbError::TbNotFound {
-                        name: format!("knot:{}", id),
-                    }))
-                }
+                Some(records) if records.is_empty() => Err(SurrealError::Db(DbError::TbNotFound {
+                    name: format!("knot:{id}"),
+                })),
                 _ => Ok(()),
             }
         }
