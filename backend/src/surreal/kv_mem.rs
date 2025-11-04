@@ -2,6 +2,7 @@ use {
     crate::SurrealService,
     dioxus::logger::tracing,
     eyre::Result,
+    include_dir::{Dir, include_dir},
     schema::{Knot, Note, SnippetData, SurrealRecord},
     surrealdb::{
         Error as SurrealError, Surreal,
@@ -10,6 +11,8 @@ use {
     },
     surrealdb_migrations::MigrationRunner,
 };
+
+const SURREAL_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/src/surreal");
 
 #[derive(Clone)]
 pub struct SurrealInMemory {
@@ -22,7 +25,10 @@ impl SurrealInMemory {
 
         client.use_ns("development").use_db("neuramancer").await?;
 
-        MigrationRunner::new(&client).up().await?;
+        MigrationRunner::new(&client)
+            .load_files(&SURREAL_DIR)
+            .up()
+            .await?;
 
         Ok(Self { client })
     }

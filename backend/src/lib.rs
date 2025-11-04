@@ -1,16 +1,14 @@
 use {
     cfg_if::cfg_if,
-    dioxus::{
-        logger::tracing,
-        prelude::{server_fn::codec::Json, *},
-    },
-    schema::{Knot, Note, SnippetData},
+    dioxus::prelude::{server_fn::codec::Json, *},
+    schema::{Knot, Note},
 };
+
+#[cfg(feature = "server")]
+use {axum::http::StatusCode, dioxus::logger::tracing, schema::SnippetData};
 
 cfg_if! {
     if #[cfg(feature = "server")] {
-        use axum::http::StatusCode;
-
         mod server;
         mod surreal;
 
