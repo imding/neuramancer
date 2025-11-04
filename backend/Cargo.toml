@@ -10,18 +10,19 @@ dioxus = { workspace = true, features = ["fullstack"] }
 
 cfg-if.workspace = true
 eyre.workspace = true
+include_dir.workspace = true
 thiserror.workspace = true
 
 axum = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 cuid2 = { workspace = true, optional = true }
-fastembed = { workspace = true, optional = true }
-qdrant-client = { workspace = true, optional = true }
-sqlx = { workspace = true, optional = true }
+# fastembed = { workspace = true, optional = true }
+once_cell = { workspace = true, optional = true }
+# qdrant-client = { workspace = true, optional = true }
+# sqlx = { workspace = true, optional = true }
 surrealdb = { workspace = true, optional = true }
 surrealdb-migrations = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
-once_cell = { workspace = true, optional = true }
 
 [features]
 server = [
@@ -29,10 +30,10 @@ server = [
     "dep:axum",
     "dep:chrono",
     "dep:cuid2",
-    "dep:fastembed",
+    # "dep:fastembed",
     "dep:once_cell",
-    "dep:qdrant-client",
-    "dep:sqlx",
+    # "dep:qdrant-client",
+    # "dep:sqlx",
     "dep:surrealdb",
     "dep:surrealdb-migrations",
     "dep:tokio",
