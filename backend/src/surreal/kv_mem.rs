@@ -1,13 +1,18 @@
 use {
-    crate::SurrealService,
+    super::SnippetDataOrId,
+    crate::{NewNote, SurrealService},
     dioxus::logger::tracing,
     eyre::Result,
-    include_dir::{Dir, include_dir},
+    include_dir::{include_dir, Dir},
     schema::{Knot, Note, SnippetData, SurrealRecord},
+};
+
+#[cfg(feature = "server")]
+use {
     surrealdb::{
-        Error as SurrealError, Surreal,
         engine::local::{Db, Mem},
         error::Db as DbError,
+        Error as SurrealError, Surreal,
     },
     surrealdb_migrations::MigrationRunner,
 };
@@ -37,50 +42,67 @@ impl SurrealInMemory {
 impl SurrealService for SurrealInMemory {
     type Error = SurrealError;
 
-    async fn create_note(&self, snippets: Vec<SnippetData>) -> Result<Note, Self::Error> {
-        let mut draft = self.client.query("BEGIN").query("LET $note = CREATE note");
+    async fn create_note(&self, snippets: Vec<SnippetDataOrId>) -> Result<NewNote, Self::Error> {
+        let mut draft = self
+            .client
+            .query("BEGIN")
+            .query("LET $note = CREATE ONLY note");
 
-        for (idx, snippet) in snippets.iter().enumerate() {
-            let (table, field, value) = match snippet {
-                SnippetData::AudioSnippet(audio_snippet) => {
-                    ("audio_snippet", "path", audio_snippet.path.as_str())
-                }
-                SnippetData::ImageSnippet(image_snippet) => {
-                    ("image_snippet", "path", image_snippet.path.as_str())
-                }
-                SnippetData::TextSnippet(text_snippet) => {
-                    ("text_snippet", "content", text_snippet.content.as_str())
-                }
-                SnippetData::VideoSnippet(video_snippet) => {
-                    ("video_snippet", "path", video_snippet.path.as_str())
-                }
-            };
+        for (index, data_or_id) in snippets.iter().enumerate() {
+            match data_or_id {
+                SnippetDataOrId::Data(data) => {
+                    let (table, field, value) = match data {
+                        SnippetData::AudioSnippet(audio_snippet) => {
+                            ("audio_snippet", "path", audio_snippet.path.as_str())
+                        }
+                        SnippetData::ImageSnippet(image_snippet) => {
+                            ("image_snippet", "path", image_snippet.path.as_str())
+                        }
+                        SnippetData::TextSnippet(text_snippet) => {
+                            ("text_snippet", "content", text_snippet.content.as_str())
+                        }
+                        SnippetData::VideoSnippet(video_snippet) => {
+                            ("video_snippet", "path", video_snippet.path.as_str())
+                        }
+                    };
 
-            draft = draft
-                .query(format!(
-                    "LET $snippet{idx} = CREATE {table} SET {field} = $value{idx}"
-                ))
-                .bind((format!("value{idx}"), value.to_string()))
-                .query(format!("RELATE $note->contain->$snippet{idx}"));
+                    eprintln!("Create {table}");
+
+                    draft = draft
+                        .query(format!(
+                            "LET $snippet{index} = CREATE ONLY {table} SET {field} = $value{index}"
+                        ))
+                        .bind((format!("value{index}"), value.to_string()))
+                        .query(format!("RELATE $note->contain->$snippet{index}"));
+                }
+                SnippetDataOrId::Id((table, id)) => {
+                    draft = draft
+                        .query(format!(
+                            "LET $existing_snippet{index} = SELECT * FROM type::thing($table{index}, $id{index})"
+                        ))
+                        .bind((format!("table{index}"), table.clone()))
+                        .bind((format!("id{index}"), id.clone()))
+                        .query(format!(
+                            "IF array::len($existing_snippet{index}) == 0 {{ THROW 'Snippet not found: ' + $table{index} + ':' + $id{index} }}"
+                        ))
+                        .query(format!(
+                            "RELATE $note->contain->type::thing($table{index}, $id{index})"
+                        ))
+                }
+            }
         }
 
         let mut response = draft
-            .query(
-                "LET $result = (SELECT *, ->contain->? AS snippets FROM $note FETCH snippets)[0]",
-            )
-            .query("RETURN $result")
+            .query("LET $note_id = record::id($note.id)")
+            .query("LET $snippet_ids = (SELECT VALUE record::id(out.id) FROM $note->contain)")
+            .query("RETURN { id: $note_id, snippet_ids: $snippet_ids }")
             .query("COMMIT")
             .await?;
-        let maybe_note: Option<Note> = response.take(0)?;
+        let maybe_new_note: Option<NewNote> = response.take(0)?;
 
-        match maybe_note {
-            Some(mut note) => {
-                note.put_id();
-                Ok(note)
-            }
-            _ => Err(SurrealError::Db(DbError::TbNotFound {
-                name: "note".to_string(),
-            })),
+        match maybe_new_note {
+            Some(new_note) => Ok(new_note),
+            _ => Err(SurrealError::Db(DbError::TxFailure)),
         }
     }
 
@@ -185,7 +207,7 @@ impl SurrealService for SurrealInMemory {
 
         tracing::debug!("{response:?}");
 
-        let knots: Vec<Knot> = response.take(0)?;
+        let knots: Vec<Knot> = response.take(5)?;
         let maybe_knot = knots.into_iter().next();
 
         match maybe_knot {
@@ -238,7 +260,8 @@ impl SurrealService for SurrealInMemory {
                 })),
                 _ => Ok(()),
             }
-        } else {
+        }
+        else {
             // Non-recursive deletion: only delete the specified knot
             let mut response = self
                 .client

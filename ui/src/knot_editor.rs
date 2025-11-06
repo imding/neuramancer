@@ -13,18 +13,18 @@ pub struct KnotEditorProps {
 
 #[component]
 pub fn KnotEditor(props: KnotEditorProps) -> Element {
-    let mut label = use_signal(|| String::new());
-    let mut intent = use_signal(|| String::new());
-    let mut note_ids = use_signal(|| Vec::<String>::new());
-    let mut knot_ids = use_signal(|| Vec::<String>::new());
+    let mut label = use_signal(String::new);
+    let mut intent = use_signal(String::new);
+    let mut note_ids = use_signal(Vec::<String>::new);
+    let mut knot_ids = use_signal(Vec::<String>::new);
     let mut is_saving = use_signal(|| false);
     let mut error_message = use_signal(|| None::<String>);
 
     let is_valid = use_memo(move || {
         let label_valid = !label().trim().is_empty();
         let intent_valid = !intent().trim().is_empty();
-        let has_ids = note_ids().iter().any(|id| !id.trim().is_empty())
-            || knot_ids().iter().any(|id| !id.trim().is_empty());
+        let has_ids = note_ids().iter().any(|id| !id.trim().is_empty()) ||
+            knot_ids().iter().any(|id| !id.trim().is_empty());
 
         label_valid && intent_valid && has_ids
     });
@@ -119,7 +119,6 @@ pub fn KnotEditor(props: KnotEditorProps) -> Element {
                             placeholder: "Enter note ID...",
                             value: note_id.clone(),
                             oninput: {
-                                let index = index;
                                 move |event: Event<FormData>| update_note_id(index, event.value())
                             },
                             disabled: is_saving(),
@@ -128,7 +127,6 @@ pub fn KnotEditor(props: KnotEditorProps) -> Element {
                             r#type: "button",
                             class: "remove-button",
                             onclick: {
-                                let index = index;
                                 move |_| remove_note_field(index)
                             },
                             disabled: is_saving(),
@@ -159,7 +157,6 @@ pub fn KnotEditor(props: KnotEditorProps) -> Element {
                                 placeholder: "Enter knot ID...",
                                 value: knot_id.clone(),
                                 oninput: {
-                                    let index = index;
                                     move |event: Event<FormData>| update_knot_id(index, event.value())
                                 },
                                 disabled: is_saving(),
@@ -168,7 +165,6 @@ pub fn KnotEditor(props: KnotEditorProps) -> Element {
                                 r#type: "button",
                                 class: "remove-button",
                                 onclick: {
-                                    let index = index;
                                     move |_| remove_knot_field(index)
                                 },
                                 disabled: is_saving(),

@@ -1,135 +1,120 @@
+mod surreal;
+
 use {
     cfg_if::cfg_if,
-    dioxus::prelude::{server_fn::codec::Json, *},
+    dioxus::prelude::*,
     schema::{Knot, Note},
 };
 
 #[cfg(feature = "server")]
-use {axum::http::StatusCode, dioxus::logger::tracing, schema::SnippetData};
+use {
+    dioxus::{fullstack::extract::State, logger::tracing},
+    schema::{SnippetData, TextSnippet},
+};
+
+pub use surreal::NewNote;
 
 cfg_if! {
     if #[cfg(feature = "server")] {
         mod server;
-        mod surreal;
 
+        // Re-export server-only types so integration tests can import them from `backend`
+        // when built with `--features server`.
         pub use {
-            server::*,
-            surreal::*,
+            server::{ServerState, ServerInstance},
+            surreal::{SnippetDataOrId, SurrealInMemory, SurrealService},
         };
     }
 }
 
-#[server(Echo)]
+#[post("/api/echo")]
 pub async fn echo(input: String) -> Result<String, ServerFnError> {
     Ok(input)
 }
 
-#[server(SaveTextNote)]
-pub async fn save_note(content: String) -> Result<Note, ServerFnError> {
-    let FromContext(state): FromContext<ServerState> = match extract().await {
-        Ok(state) => state,
-        Err(error) => {
-            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
-
-            return Err(ServerFnError::ServerError(format!("{error}")));
-        }
-    };
+#[post("/api/notes")]
+pub async fn save_note(content: String) -> Result<NewNote, ServerFnError> {
+    let State(state): State<ServerState> = dioxus::fullstack::FullstackContext::extract().await?;
     let result = state
         .surreal
-        .create_note(vec![SnippetData::TextSnippet(schema::TextSnippet {
-            content,
-        })])
-        .await?;
-
-    tracing::debug!("{result:?}");
+        .create_note(vec![SnippetDataOrId::Data(SnippetData::TextSnippet(
+            TextSnippet { content },
+        ))])
+        .await
+        .map_err(|error| ServerFnError::ServerError {
+            message: format!("{error}"),
+            code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            details: None,
+        })?;
 
     Ok(result)
 }
 
-#[server(ReadTextNotes)]
+#[get("/api/notes")]
 pub async fn read_notes() -> Result<Vec<Note>, ServerFnError> {
-    let FromContext(state): FromContext<ServerState> = match extract().await {
-        Ok(state) => state,
-        Err(error) => {
-            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
-
-            return Err(ServerFnError::ServerError(format!("{error}")));
-        }
-    };
-    let notes = match state.surreal.read_notes().await {
-        Ok(notes) => notes,
-        Err(error) => {
-            server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
-
-            return Err(ServerFnError::ServerError(format!("{error}")));
-        }
-    };
+    let State(state): State<ServerState> = dioxus::fullstack::FullstackContext::extract().await?;
+    let notes = state
+        .surreal
+        .read_notes()
+        .await
+        .map_err(|error| ServerFnError::ServerError {
+            message: format!("{error}"),
+            code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            details: None,
+        })?;
 
     Ok(notes)
 }
 
-#[server(DeleteNote)]
+#[post("/api/notes/delete")]
 pub async fn delete_note(id: String) -> Result<(), ServerFnError> {
-    let FromContext(state): FromContext<ServerState> = match extract().await {
-        Ok(state) => state,
-        Err(error) => {
-            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
-
-            return Err(ServerFnError::ServerError(format!("{error}")));
-        }
-    };
+    let State(state): State<ServerState> = dioxus::fullstack::FullstackContext::extract().await?;
 
     match state.surreal.delete_note(id.clone()).await {
         Ok(()) => {
             tracing::debug!("Successfully deleted note with id: {}", id);
             Ok(())
         }
-        Err(error) => {
-            server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
-
-            Err(ServerFnError::ServerError(format!(
-                "Failed to delete note {id}: {error}"
-            )))
-        }
+        Err(error) => Err(ServerFnError::ServerError {
+            message: format!("Failed to delete note {id}: {error}"),
+            code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            details: None,
+        }),
     }
 }
 
-#[server(CreateKnot, input = Json)]
+#[post("/api/knots")]
 pub async fn create_knot(
     label: String,
     intent: String,
     note_ids: Vec<String>,
     knot_ids: Vec<String>,
 ) -> Result<Knot, ServerFnError> {
-    let FromContext(state): FromContext<ServerState> = match extract().await {
-        Ok(state) => state,
-        Err(error) => {
-            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
-
-            return Err(ServerFnError::ServerError(format!("{error}")));
-        }
-    };
+    let State(state): State<ServerState> = dioxus::fullstack::FullstackContext::extract().await?;
 
     // Validate input parameters
     if knot_ids.is_empty() && note_ids.is_empty() {
-        server_context().response_parts_mut().status = StatusCode::BAD_REQUEST;
-        return Err(ServerFnError::ServerError(
-            "At least one knot ID or note ID must be provided".to_string(),
-        ));
+        return Err(ServerFnError::ServerError {
+            message: "At least one knot ID or note ID must be provided".to_string(),
+            code: StatusCode::BAD_REQUEST.as_u16(),
+            details: None,
+        });
     }
 
     if label.trim().is_empty() {
-        server_context().response_parts_mut().status = StatusCode::BAD_REQUEST;
-        return Err(ServerFnError::ServerError(
-            "Label cannot be empty".to_string(),
-        ));
+        return Err(ServerFnError::ServerError {
+            message: "Label cannot be empty".to_string(),
+            code: StatusCode::BAD_REQUEST.as_u16(),
+            details: None,
+        });
     }
 
     if intent.trim().is_empty() {
-        server_context().response_parts_mut().status = StatusCode::BAD_REQUEST;
-        return Err(ServerFnError::ServerError(
-            "Intent cannot be empty".to_string(),
-        ));
+        return Err(ServerFnError::ServerError {
+            message: "Intent cannot be empty".to_string(),
+            code: StatusCode::BAD_REQUEST.as_u16(),
+            details: None,
+        });
     }
 
     match state
@@ -139,47 +124,36 @@ pub async fn create_knot(
     {
         Ok(knot) => Ok(knot),
         Err(error) => {
-            server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
-
             tracing::debug!("{error}");
-            Err(ServerFnError::ServerError(error.to_string()))
+            Err(ServerFnError::ServerError {
+                message: error.to_string(),
+                code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                details: None,
+            })
         }
     }
 }
 
-#[server(ReadKnots)]
+#[get("/api/knots")]
 pub async fn read_knots() -> Result<Vec<Knot>, ServerFnError> {
-    let FromContext(state): FromContext<ServerState> = match extract().await {
-        Ok(state) => state,
-        Err(error) => {
-            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
-
-            tracing::error!("{error}");
-            return Err(ServerFnError::ServerError(format!("{error}")));
-        }
-    };
+    let State(state): State<ServerState> = dioxus::fullstack::FullstackContext::extract().await?;
 
     match state.surreal.read_knots().await {
         Ok(knots) => Ok(knots),
         Err(error) => {
-            server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
-
             tracing::error!("{error}");
-            Err(ServerFnError::ServerError(error.to_string()))
+            Err(ServerFnError::ServerError {
+                message: error.to_string(),
+                code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                details: None,
+            })
         }
     }
 }
 
-#[server(DeleteKnot)]
+#[post("/api/knots/delete")]
 pub async fn delete_knot(id: String, recursive: bool) -> Result<(), ServerFnError> {
-    let FromContext(state): FromContext<ServerState> = match extract().await {
-        Ok(state) => state,
-        Err(error) => {
-            server_context().response_parts_mut().status = StatusCode::SERVICE_UNAVAILABLE;
-
-            return Err(ServerFnError::ServerError(format!("{error}")));
-        }
-    };
+    let State(state): State<ServerState> = dioxus::fullstack::FullstackContext::extract().await?;
 
     match state.surreal.delete_knot(id.clone(), recursive).await {
         Ok(()) => {
@@ -190,12 +164,10 @@ pub async fn delete_knot(id: String, recursive: bool) -> Result<(), ServerFnErro
             );
             Ok(())
         }
-        Err(error) => {
-            server_context().response_parts_mut().status = StatusCode::INTERNAL_SERVER_ERROR;
-
-            Err(ServerFnError::ServerError(format!(
-                "Failed to delete knot {id}: {error}"
-            )))
-        }
+        Err(error) => Err(ServerFnError::ServerError {
+            message: format!("Failed to delete knot {id}: {error}"),
+            code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            details: None,
+        }),
     }
 }

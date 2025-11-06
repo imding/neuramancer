@@ -2,7 +2,7 @@ use {crate::Note, dioxus::prelude::*};
 
 #[component]
 pub fn NoteList() -> Element {
-    let notes = use_resource(move || backend::read_notes());
+    let notes = use_resource(backend::read_notes);
 
     rsx! {
         div { id: "note-list",

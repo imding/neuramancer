@@ -1,6 +1,6 @@
 use {
     crate::TestBackend,
-    backend::SurrealService,
+    backend::{SnippetDataOrId, SurrealService},
     schema::{SnippetData, TextSnippet},
 };
 
@@ -8,22 +8,35 @@ use {
 async fn should_create_note() {
     let mut backend = TestBackend::new().await;
     let content = "Yes";
-    let snippets = vec![SnippetData::TextSnippet(TextSnippet {
+    let text_snippet = SnippetData::TextSnippet(TextSnippet {
         content: content.to_string(),
-    })];
-    let create_response = backend.state.surreal.create_note(snippets.clone()).await;
+    });
 
-    assert!(create_response.is_ok());
+    match backend
+        .state
+        .surreal
+        .create_note(vec![SnippetDataOrId::Data(text_snippet.clone())])
+        .await
+    {
+        Ok(new_note) => {
+            assert!(new_note.snippet_ids.len() == 1);
 
-    let read_response = backend.state.surreal.read_notes().await;
+            let read_response = backend.state.surreal.read_notes().await;
 
-    assert!(read_response.is_ok());
+            assert!(read_response.is_ok());
 
-    let notes = read_response.unwrap();
+            let notes = read_response.unwrap();
 
-    assert!(notes.len() == 1);
-    assert!(notes[0].snippets.len() == 1);
-    assert!(notes[0].snippets[0].data == snippets[0]);
+            assert!(notes.len() == 1);
+            assert!(notes[0].snippets.len() == 1);
+            assert!(notes[0].snippets[0].data == text_snippet);
+            assert!(notes[0].id_.as_ref().unwrap() == &new_note.id);
+        }
+        Err(error) => {
+            eprintln!("{error}");
+            assert!(false);
+        }
+    };
 
     backend.clean_up().await;
 }

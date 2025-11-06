@@ -1,7 +1,8 @@
-use dioxus::prelude::*;
-
-use ui::Navbar;
-use views::{Blog, Home};
+use {
+    dioxus::prelude::*,
+    ui::Navbar,
+    views::{Blog, Home},
+};
 
 mod views;
 

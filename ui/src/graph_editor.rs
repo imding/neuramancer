@@ -76,7 +76,7 @@ struct NotesTabProps {}
 
 #[component]
 fn NotesTab() -> Element {
-    let mut notes_query = use_resource(move || backend::read_notes());
+    let mut notes_query = use_resource(backend::read_notes);
 
     rsx! {
         match notes_query() {
@@ -121,7 +121,8 @@ struct NoteItemProps {
 
 #[component]
 fn NoteItem(props: NoteItemProps) -> Element {
-    let Some(id) = props.note.id_ else {
+    let Some(id) = props.note.id_
+    else {
         return rsx! {
             p { "Invalid note" }
         };
@@ -162,7 +163,7 @@ struct KnotsTabProps {
 
 #[component]
 fn KnotsTab(props: KnotsTabProps) -> Element {
-    let mut knots = use_resource(move || backend::read_knots());
+    let mut knots = use_resource(backend::read_knots);
     let mut show_knot_editor = use_signal(|| false);
 
     rsx! {
@@ -217,7 +218,8 @@ struct KnotItemProps {
 
 #[component]
 fn KnotItem(props: KnotItemProps) -> Element {
-    let Some(id) = props.knot.id_ else {
+    let Some(id) = props.knot.id_
+    else {
         return rsx! {
             p { "Invalid knot" }
         };

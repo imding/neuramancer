@@ -16,8 +16,8 @@
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [
         "x86_64-linux"
-        "aarch64-linux"
-        "x86_64-darwin"
+        # "aarch64-linux"
+        # "x86_64-darwin"
         "aarch64-darwin"
       ];
 
@@ -41,49 +41,27 @@
               ];
           };
           fenixPkgs = inputs.fenix.packages.${system};
-          pinnedRust = fenixPkgs.toolchainOf {
-            channel = "1.86.0";
-            date = "2025-04-03";
-            sha256 = "sha256-X/4ZBHO3iW0fOenQ3foEvscgAPJYl2abspaBThDOukI=";
-          };
-          wasm32Toolchain = fenixPkgs.targets.wasm32-unknown-unknown.toolchainOf {
-            channel = "1.86.0";
-            date = "2025-04-03";
-            sha256 = "sha256-X/4ZBHO3iW0fOenQ3foEvscgAPJYl2abspaBThDOukI=";
-          };
           toolchain = fenixPkgs.combine [
-            (pinnedRust.withComponents [
-              "cargo"
-              "clippy"
-              "rust-src"
-              "rustc"
-              "rustfmt"
-              "rust-analyzer"
-            ])
-            wasm32Toolchain.rust-std
+            fenixPkgs.complete.toolchain
+            fenixPkgs.targets.wasm32-unknown-unknown.latest.rust-std
           ];
 
           craneLib = (inputs.crane.mkLib pkgs).overrideToolchain toolchain;
 
-          wasm-bindgen-cli_0_2_104 = pkgs.stdenv.mkDerivation {
+          wasm-bindgen-cli_0_2_108 = pkgs.stdenv.mkDerivation {
             pname = "wasm-bindgen-cli";
-            version = "0.2.104";
+            version = "0.2.108";
 
             src = pkgs.fetchurl (
-              if pkgs.system == "x86_64-darwin" then
+              if pkgs.stdenv.hostPlatform.system == "aarch64-darwin" then
                 {
-                  url = "https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.104/wasm-bindgen-0.2.104-x86_64-apple-darwin.tar.gz";
-                  sha256 = "sha256-+jcFeR7diXNU0msGFvzL24v2o05dhwRAtsY0sAjK1UQ=";
-                }
-              else if pkgs.system == "aarch64-darwin" then
-                {
-                  url = "https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.104/wasm-bindgen-0.2.104-aarch64-apple-darwin.tar.gz";
-                  sha256 = "sha256-FnwN0zZrQsNHXYsvPJdHL+zfmM7UwjT/5qhux0H32tg=";
+                  url = "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.108/wasm-bindgen-0.2.108-aarch64-apple-darwin.tar.gz";
+                  sha256 = lib.fakeHash;
                 }
               else
                 {
-                  url = "https://github.com/rustwasm/wasm-bindgen/releases/download/0.2.104/wasm-bindgen-0.2.104-x86_64-unknown-linux-musl.tar.gz";
-                  sha256 = "sha256-lVN0CQfCwQCPmkS7AO0fWzn/xV2dMxWBta68iRpLdy8=";
+                  url = "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.108/wasm-bindgen-0.2.108-x86_64-unknown-linux-musl.tar.gz";
+                  sha256 = "sha256-0V1+R2/ux40Oye3Ce493J57Ho+Yid1bnA25c0gZoAPQ=";
                 }
             );
 
@@ -94,6 +72,40 @@
               cp wasm-bindgen $out/bin/
               cp wasm-bindgen-test-runner $out/bin/
               cp wasm2es6js $out/bin/
+              chmod +x $out/bin/*
+            '';
+          };
+
+          dioxus-cli_0_7_3 = pkgs.stdenv.mkDerivation {
+            pname = "dioxus-cli";
+            version = "0.7.3";
+
+            src = pkgs.fetchurl (
+              if pkgs.stdenv.hostPlatform.system == "aarch64-darwin" then
+                {
+                  url = "https://github.com/DioxusLabs/dioxus/releases/download/v0.7.3/dx-aarch64-apple-darwin.tar.gz";
+                  sha256 = lib.fakeHash;
+                }
+              else
+                {
+                  url = "https://github.com/DioxusLabs/dioxus/releases/download/v0.7.3/dx-x86_64-unknown-linux-gnu.tar.gz";
+                  sha256 = "sha256-8nTyLX7QOC1jh1nMALW3wBFFeCnoMBEFLKGRx4efeg4=";
+                }
+            );
+
+            # The tarball contains just the binary directly, no directory structure
+            sourceRoot = ".";
+
+            nativeBuildInputs = lib.optionals pkgs.stdenv.isLinux [ pkgs.autoPatchelfHook ];
+            buildInputs = lib.optionals pkgs.stdenv.isLinux [
+              pkgs.openssl
+              pkgs.stdenv.cc.cc.lib
+              pkgs.zlib
+            ];
+
+            installPhase = ''
+              mkdir -p $out/bin
+              cp dx $out/bin/
               chmod +x $out/bin/*
             '';
           };
@@ -122,22 +134,23 @@
             doNotPostBuildInstallCargoBinaries = true;
 
             nativeBuildInputs = with pkgs; [
-              dioxus-cli
+              binaryen
+              dioxus-cli_0_7_3
               pkg-config
-              wasm-bindgen-cli_0_2_104
+              wasm-bindgen-cli_0_2_108
             ];
 
             buildInputs = with pkgs; [
               openssl
-              onnxruntime
+              # onnxruntime
             ];
 
-            ORT_STRATEGY = "system";
-            ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
+            # ORT_STRATEGY = "system";
+            # ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
 
             buildPhase = ''
               runHook preBuild
-              dx bundle -p web
+              NO_DOWNLOADS=1 dx bundle -r -p web --debug-symbols=false
               runHook postBuild
             '';
 
@@ -167,7 +180,7 @@
               cp ${migrationFiles}/.surrealdb ./.surrealdb
             '';
             config = {
-              Cmd = [ "/server" ];
+              Cmd = [ "/web" ];
               Env = [
                 "PORT=8080"
                 "IP=0.0.0.0"
@@ -201,13 +214,13 @@
               flyctl
 
               # Rust/Dioxus tools
-              dioxus-cli
-              wasm-bindgen-cli_0_2_104
+              dioxus-cli_0_7_3
+              wasm-bindgen-cli_0_2_108
 
               # Build dependencies (needed for dx serve/bundle)
               pkg-config
               openssl
-              onnxruntime
+              # onnxruntime
 
               # Development tools
               git
@@ -221,8 +234,8 @@
             shellHook = ''
               export RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}
               export DISPLAY=:0
-              export ORT_STRATEGY=system
-              export ORT_LIB_LOCATION=${pkgs.onnxruntime}/lib
+              # export ORT_STRATEGY=system
+              # export ORT_LIB_LOCATION=${pkgs.onnxruntime}/lib
             '';
           };
         };

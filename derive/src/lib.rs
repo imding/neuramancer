@@ -1,7 +1,7 @@
 use {
     proc_macro::TokenStream,
     quote::quote,
-    syn::{Data, DeriveInput, parse_macro_input},
+    syn::{parse_macro_input, Data, DeriveInput},
 };
 
 #[proc_macro_derive(PutId, attributes(put_ids))]
@@ -26,11 +26,11 @@ pub fn derive_record_id_string(input: TokenStream) -> TokenStream {
 
         let field_name = field.ident.as_ref().unwrap();
 
-        return Some(quote! {
+        Some(quote! {
             for item in self.#field_name.iter_mut() {
                 item.put_id();
             }
-        });
+        })
     });
 
     let expanded = quote! {

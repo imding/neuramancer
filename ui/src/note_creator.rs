@@ -1,10 +1,10 @@
-use {crate::NoteEditor, dioxus::prelude::*, schema::Note};
+use {crate::NoteEditor, backend::NewNote, dioxus::prelude::*};
 
 const NOTE_CREATOR_CSS: Asset = asset!("/assets/styling/note_creator.css");
 
 #[derive(Clone, PartialEq, Props)]
 pub struct NoteCreatorProps {
-    handle_created: Option<Callback<Note>>,
+    handle_created: Option<Callback<NewNote>>,
 }
 
 #[component]

@@ -1,10 +1,10 @@
-use {crate::SurrealInMemory, dioxus::prelude::*, once_cell::sync::Lazy, tokio::runtime::Runtime};
-
-static RUNTIME: Lazy<Runtime> =
-    Lazy::new(|| Runtime::new().expect("Tokio runtime should lazily initialise."));
-
-static SERVER_STATE: Lazy<ServerState> =
-    Lazy::new(|| RUNTIME.block_on(async { ServerState::new().await }));
+use {
+    crate::SurrealInMemory,
+    dioxus::{
+        fullstack::{FullstackContext, extract::FromRef},
+        prelude::*,
+    },
+};
 
 pub struct ServerInstance;
 
@@ -34,10 +34,23 @@ impl ServerState {
     }
 }
 
+impl FromRef<FullstackContext> for ServerState {
+    fn from_ref(ctx: &FullstackContext) -> Self {
+        ctx.extension::<ServerState>().unwrap()
+    }
+}
+
 impl ServerInstance {
     pub fn serve(component: fn() -> Element) {
-        LaunchBuilder::new()
-            .with_context(SERVER_STATE.clone())
-            .launch(component);
+        dioxus::serve(|| async move {
+            use dioxus::server::axum::Extension;
+
+            // Initialize state inside the existing async runtime to avoid nested Tokio runtimes.
+            let server_state = ServerState::new().await;
+
+            let router = dioxus::server::router(component).layer(Extension(server_state));
+
+            Ok(router)
+        });
     }
 }

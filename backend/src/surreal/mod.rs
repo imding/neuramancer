@@ -1,19 +1,65 @@
-mod kv_mem;
-
-pub use kv_mem::*;
-
 use {
+    cfg_if::cfg_if,
     schema::{Knot, Note, SnippetData},
+    serde::{Deserialize, Serialize},
     std::future::Future,
 };
+
+cfg_if! {
+    if #[cfg(feature = "server")] {
+        mod kv_mem;
+
+        use {
+            dioxus::{
+                fullstack::response::{IntoResponse, Response},
+                prelude::StatusCode,
+            },
+            serde_json::to_string,
+        };
+
+        pub use kv_mem::*;
+    }
+}
+
+pub enum SnippetDataOrId {
+    Data(SnippetData),
+    Id((String, String)),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct NewNote {
+    pub id: String,
+    pub snippet_ids: Vec<String>,
+}
+
+#[cfg(feature = "server")]
+impl IntoResponse for NewNote {
+    fn into_response(self) -> Response {
+        let json_body = match to_string(&self) {
+            Ok(body) => body,
+            Err(_) => {
+                return Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body("Failed to serialize".into())
+                    .unwrap();
+            }
+        };
+
+        Response::builder()
+            .status(StatusCode::OK)
+            .header("content-Type", "application/json")
+            .body(json_body.into())
+            .unwrap()
+    }
+}
 
 pub trait SurrealService {
     type Error;
 
     fn create_note(
         &self,
-        snippets: Vec<SnippetData>,
-    ) -> impl Future<Output = Result<Note, Self::Error>> + Send;
+        snippets: Vec<SnippetDataOrId>,
+    ) -> impl Future<Output = Result<NewNote, Self::Error>> + Send;
 
     fn read_notes(&self) -> impl Future<Output = Result<Vec<Note>, Self::Error>> + Send;
 

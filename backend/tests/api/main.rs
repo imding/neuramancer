@@ -1,3 +1,6 @@
+#![cfg(feature = "server")]
+
+mod knots;
 mod notes;
 
 use backend::ServerState;

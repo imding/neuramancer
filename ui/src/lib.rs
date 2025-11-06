@@ -15,6 +15,7 @@ mod snippet;
 mod snippet_data;
 
 pub use {
-    app_access::*, demo::*, echo::*, graph_editor::*, header::*, hero::*, knot_editor::*, navbar::*, note::*, note_creator::*,
-    note_editor::*, note_list::*, note_snippets::*, snippet::*, snippet_data::*,
+    app_access::*, demo::*, echo::*, graph_editor::*, header::*, hero::*, knot_editor::*,
+    navbar::*, note::*, note_creator::*, note_editor::*, note_list::*, note_snippets::*,
+    snippet::*, snippet_data::*,
 };

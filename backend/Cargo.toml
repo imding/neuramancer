@@ -1,19 +1,21 @@
 [package]
 name = "backend"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 schema.workspace = true
 
+# Enable Dioxus' server-side APIs when building backend with the `server` feature.
 dioxus = { workspace = true, features = ["fullstack"] }
 
 cfg-if.workspace = true
 eyre.workspace = true
 include_dir.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 
-axum = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 cuid2 = { workspace = true, optional = true }
 # fastembed = { workspace = true, optional = true }
@@ -24,10 +26,11 @@ surrealdb = { workspace = true, optional = true }
 surrealdb-migrations = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
 [features]
 server = [
-    "schema/server",
-    "dep:axum",
     "dep:chrono",
     "dep:cuid2",
     # "dep:fastembed",
@@ -37,5 +40,7 @@ server = [
     "dep:surrealdb",
     "dep:surrealdb-migrations",
     "dep:tokio",
+    "dioxus/server",
+    "schema/server",
 ]
 web = ["schema/web"]
