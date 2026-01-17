@@ -1,6 +1,6 @@
 use {
     dioxus::{logger::tracing, prelude::*},
-    ui::{AppAccess, Header, Navbar},
+    ui::{AppAccess, Header, Navbar, StoresProvider},
     views::{Blog, Home, KnowledgeSpace, NotFound},
 };
 
@@ -33,10 +33,12 @@ fn main() {
 #[component]
 fn App() -> Element {
     rsx! {
-        document::Link { rel: "icon", href: FAVICON }
-        document::Link { rel: "stylesheet", href: MAIN_CSS }
+        StoresProvider {
+            document::Link { rel: "icon", href: FAVICON }
+            document::Link { rel: "stylesheet", href: MAIN_CSS }
 
-        Router::<Route> {}
+            Router::<Route> {}
+        }
     }
 }
 

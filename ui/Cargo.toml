@@ -6,6 +6,6 @@ edition = "2024"
 [dependencies]
 backend = { workspace = true, features = ["web"] }
 
-schema.workspace = true
+schema = { workspace = true, features = ["web"] }
 
 dioxus.workspace = true

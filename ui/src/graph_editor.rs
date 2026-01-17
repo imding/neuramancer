@@ -1,7 +1,7 @@
 use {
-    crate::KnotEditor,
+    crate::{use_notes_store, KnotEditor},
     dioxus::{logger::tracing, prelude::*},
-    schema::{Knot, Note},
+    schema::Knot,
 };
 
 const GRAPH_EDITOR_CSS: Asset = asset!("/assets/styling/graph_editor.css");
@@ -23,7 +23,6 @@ pub fn GraphEditor(props: GraphEditorProps) -> Element {
 
     rsx! {
         document::Link { rel: "stylesheet", href: GRAPH_EDITOR_CSS }
-
         button { id: "graph-editor-trigger", popovertarget: "graph-editor",
 
             svg {
@@ -76,82 +75,42 @@ struct NotesTabProps {}
 
 #[component]
 fn NotesTab() -> Element {
-    let mut notes_query = use_resource(backend::read_notes);
+    let store = use_notes_store();
+    let notes = store.read().state.read().items.clone();
 
     rsx! {
-        match notes_query() {
-            Some(Ok(notes)) => {
-                match notes.is_empty() {
-                    true => rsx! {
-                        p { class: "empty-state", "No notes found" }
-                    },
-                    _ => rsx! {
-                        for note in notes {
-                            match &note.id_ {
-                                Some(id) => rsx! {
-                                    NoteItem {
-                                        key: "note-{id}",
-                                        note,
-                                        handle_deleted: move || notes_query.restart(),
-                                    }
-                                },
-                                _ => rsx! {
-                                    p { class: "error", "Invalid note" }
-                                },
-                            }
+        match notes.is_empty() {
+            true => rsx! {
+                p { class: "empty-state", "No notes found" }
+            },
+            _ => rsx! {
+                for note in notes {
+                    div { class: "note-item",
+                        match note.id.clone() {
+                            Some(id) => rsx! {
+                                p { "Note ID: {id}" }
+                            },
+                            None => rsx! {
+                                p { "Note ID: (pending)" }
+                            },
                         }
-                    },
-                }
-            }
-            Some(Err(error)) => rsx! {
-                p { class: "error", "Error loading notes: {error}" }
-            },
-            None => rsx! {
-                p { class: "loading", "Loading notes..." }
-            },
-        }
-    }
-}
+                        p { "Snippets: {note.snippet_count}" }
 
-#[derive(Clone, PartialEq, Props)]
-struct NoteItemProps {
-    note: Note,
-    handle_deleted: Callback<()>,
-}
-
-#[component]
-fn NoteItem(props: NoteItemProps) -> Element {
-    let Some(id) = props.note.id_
-    else {
-        return rsx! {
-            p { "Invalid note" }
-        };
-    };
-
-    rsx! {
-        div { class: "note-item",
-            p { "Note ID: {id}" }
-            p { "Snippets: {props.note.snippets.len()}" }
-
-            button {
-                class: "delete-button",
-                onclick: {
-                    let id = id.clone();
-                    move |_| {
-                        let id = id.clone();
-                        async move {
-                            match backend::delete_note(id.clone()).await {
-                                Ok(_) => props.handle_deleted.call(()),
-                                Err(error) => {
-                                    tracing::error!("Failed to delete note {id}: {error:?}");
+                        match note.id.clone() {
+                            Some(id) => rsx! {
+                                button {
+                                    class: "delete-button",
+                                    onclick: move |_| {
+                                        store.read().delete_note_optimistic(id.clone());
+                                    },
+                                    "Delete"
                                 }
-                            }
+                            },
+                            None => rsx! {},
                         }
                     }
-                },
-
-                "Delete"
-            }
+                }
+            },
         }
     }
 }
