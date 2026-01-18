@@ -15,6 +15,6 @@ dioxus = { workspace = true, features = ["fullstack", "router"] }
 tokio = { workspace = true, optional = true }
 
 [features]
-default = []
+default = ["server", "web"]
 web = ["dioxus/web"]
 server = ["dioxus/server", "backend/server"]

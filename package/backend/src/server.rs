@@ -1,8 +1,11 @@
+#![cfg(feature = "server")]
+
 use {
     crate::SurrealInMemory,
     dioxus::{
-        fullstack::{extract::FromRef, FullstackContext},
+        fullstack::{FullstackContext, extract::FromRef},
         prelude::*,
+        server::{axum::Extension, router},
     },
 };
 
@@ -43,12 +46,8 @@ impl FromRef<FullstackContext> for ServerState {
 impl ServerInstance {
     pub fn serve(component: fn() -> Element) {
         dioxus::serve(|| async move {
-            use dioxus::server::axum::Extension;
-
-            // Initialize state inside the existing async runtime to avoid nested Tokio runtimes.
             let server_state = ServerState::new().await;
-
-            let router = dioxus::server::router(component).layer(Extension(server_state));
+            let router = router(component).layer(Extension(server_state));
 
             Ok(router)
         });

@@ -33,8 +33,7 @@ async fn should_create_note() {
             assert!(notes[0].id_.as_ref().unwrap() == &new_note.id);
         }
         Err(error) => {
-            eprintln!("{error}");
-            assert!(false);
+            panic!("{error}");
         }
     };
 
