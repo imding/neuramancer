@@ -40,6 +40,7 @@
                 # "surrealist"
               ];
           };
+          hostSystem = pkgs.stdenv.hostPlatform.system;
           fenixPkgs = inputs.fenix.packages.${system};
           toolchain = fenixPkgs.combine [
             fenixPkgs.complete.toolchain
@@ -53,10 +54,10 @@
             version = "0.2.108";
 
             src = pkgs.fetchurl (
-              if pkgs.stdenv.hostPlatform.system == "aarch64-darwin" then
+              if hostSystem == "aarch64-darwin" then
                 {
                   url = "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.108/wasm-bindgen-0.2.108-aarch64-apple-darwin.tar.gz";
-                  sha256 = lib.fakeHash;
+                  sha256 = "sha256-OQPIHciUNZLf2dmMjCHJoF+CZaprABT2QahFfOxJJd0=";
                 }
               else
                 {
@@ -81,10 +82,10 @@
             version = "0.7.3";
 
             src = pkgs.fetchurl (
-              if pkgs.stdenv.hostPlatform.system == "aarch64-darwin" then
+              if hostSystem == "aarch64-darwin" then
                 {
                   url = "https://github.com/DioxusLabs/dioxus/releases/download/v0.7.3/dx-aarch64-apple-darwin.tar.gz";
-                  sha256 = lib.fakeHash;
+                  sha256 = "sha256-q2k0s/X3Hsk1D4vF7j/jTkObN4WZiZtI7UcX8o+pEuY=";
                 }
               else
                 {
@@ -107,6 +108,13 @@
               mkdir -p $out/bin
               cp dx $out/bin/
               chmod +x $out/bin/*
+            '';
+
+            postFixup = lib.optionalString pkgs.stdenv.isDarwin ''
+              ${pkgs.darwin.cctools}/bin/install_name_tool \
+                -change /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib ${pkgs.openssl.out}/lib/libssl.3.dylib \
+                -change /opt/homebrew/opt/openssl@3/lib/libcrypto.3.dylib ${pkgs.openssl.out}/lib/libcrypto.3.dylib \
+                $out/bin/dx
             '';
           };
 
