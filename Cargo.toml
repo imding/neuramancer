@@ -1,23 +1,23 @@
 [workspace]
 resolver = "2"
 members = [
-    "backend",
-    "derive",
-    "schema",
-    "ui",
+    "package/backend",
+    "package/derive",
+    "package/schema",
+    "package/ui",
 
     # platform
-    "desktop",
-    "mobile",
-    "web",
+    "package/desktop",
+    "package/mobile",
+    "package/web",
 ]
 
 [workspace.dependencies]
 # Workspace
-backend = { path = "backend" }
-derive = { path = "derive" }
-schema = { path = "schema" }
-ui = { path = "ui" }
+backend = { path = "package/backend" }
+derive = { path = "package/derive" }
+schema = { path = "package/schema" }
+ui = { path = "package/ui" }
 
 # External
 chrono = { version = "0.4.42", features = ["serde"] }
