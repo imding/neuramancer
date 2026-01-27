@@ -1,5 +1,6 @@
 use {
     dioxus::{logger::tracing, prelude::*},
+    knowledge_space_web::start_bevy,
     ui::{GraphEditor, NoteCreator},
 };
 
@@ -8,13 +9,25 @@ const KNOWLEDGE_SPACE_CSS: Asset = asset!("/assets/knowledge_space.css");
 #[component]
 pub fn KnowledgeSpace() -> Element {
     let handle_config = move |_| {};
+    let bevy_started = use_signal(|| false);
+
+    use_future(move || {
+        let mut bevy_started = bevy_started;
+
+        async move {
+            if !bevy_started() {
+                bevy_started.set(true);
+                start_bevy("#bevy-render");
+            }
+        }
+    });
 
     rsx! {
         document::Link { rel: "stylesheet", href: KNOWLEDGE_SPACE_CSS }
 
         div { id: "knowledge-space",
 
-            div { id: "bevy-render" }
+            canvas { id: "bevy-render" }
 
             div { id: "controls",
 

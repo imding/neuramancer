@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 backend.workspace = true
+knowledge_space_web.workspace = true
 schema.workspace = true
 ui.workspace = true
 
