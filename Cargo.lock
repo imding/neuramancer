@@ -5691,6 +5691,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "knowledge_space_core",
+ "once_cell",
 ]
 
 [[package]]

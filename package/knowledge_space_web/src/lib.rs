@@ -1,17 +1,37 @@
 #[cfg(target_arch = "wasm32")]
-use knowledge_space_core::KnowledgeSpacePlugin;
-
-#[cfg(target_arch = "wasm32")]
-use bevy::{
-    prelude::*,
-    window::{Window, WindowPlugin},
+use {
+    bevy::{
+        prelude::*,
+        window::{Window, WindowPlugin},
+    },
+    knowledge_space_core::{KnowledgeSpacePlugin, KnowledgeSpaceState},
+    once_cell::sync::Lazy,
+    std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
 };
 
 #[cfg(target_arch = "wasm32")]
-use std::sync::atomic::{AtomicBool, Ordering};
+static BEVY_STARTED: AtomicBool = AtomicBool::new(false);
 
 #[cfg(target_arch = "wasm32")]
-static BEVY_STARTED: AtomicBool = AtomicBool::new(false);
+static SHARED_STATE: Lazy<KnowledgeSpaceState> = Lazy::new(|| KnowledgeSpaceState {
+    note_count: Arc::new(Mutex::new(0)),
+});
+
+#[cfg(target_arch = "wasm32")]
+pub fn set_note_count(count: usize) {
+    match SHARED_STATE.note_count.lock() {
+        Ok(mut value) => *value = count,
+        Err(poisoned) => *poisoned.into_inner() = count,
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn set_note_count(_count: usize) {
+    // No-op on non-wasm targets.
+}
 
 #[cfg(target_arch = "wasm32")]
 pub fn start_bevy(canvas_selector: &str) {
@@ -20,6 +40,7 @@ pub fn start_bevy(canvas_selector: &str) {
     }
 
     App::new()
+        .insert_resource(SHARED_STATE.clone())
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 canvas: Some(canvas_selector.to_string()),

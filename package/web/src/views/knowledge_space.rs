@@ -1,7 +1,7 @@
 use {
     dioxus::{logger::tracing, prelude::*},
-    knowledge_space_web::start_bevy,
-    ui::{GraphEditor, NoteCreator},
+    knowledge_space_web::{set_note_count, start_bevy},
+    ui::{use_notes_store, GraphEditor, NoteCreator},
 };
 
 const KNOWLEDGE_SPACE_CSS: Asset = asset!("/assets/knowledge_space.css");
@@ -10,6 +10,8 @@ const KNOWLEDGE_SPACE_CSS: Asset = asset!("/assets/knowledge_space.css");
 pub fn KnowledgeSpace() -> Element {
     let handle_config = move |_| {};
     let bevy_started = use_signal(|| false);
+    let store = use_notes_store();
+    let note_count = use_memo(move || store.read().state.read().items.len());
 
     use_future(move || {
         let mut bevy_started = bevy_started;
@@ -20,6 +22,10 @@ pub fn KnowledgeSpace() -> Element {
                 start_bevy("#bevy-render");
             }
         }
+    });
+
+    use_effect(move || {
+        set_note_count(note_count());
     });
 
     rsx! {

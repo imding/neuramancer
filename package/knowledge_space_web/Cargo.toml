@@ -17,3 +17,5 @@ bevy = { workspace = true, features = [
   "web",
   "webgl2",
 ] }
+
+once_cell.workspace = true
