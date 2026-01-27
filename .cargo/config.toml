@@ -1,0 +1,5 @@
+[alias]
+test-server = 'test --features server'
+
+[target.wasm32-unknown-unknown]
+rustflags = []

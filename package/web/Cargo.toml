@@ -1,0 +1,20 @@
+[package]
+name = "web"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+backend.workspace = true
+schema.workspace = true
+ui.workspace = true
+
+cfg-if.workspace = true
+
+dioxus = { workspace = true, features = ["fullstack", "router"] }
+
+tokio = { workspace = true, optional = true }
+
+[features]
+default = ["server", "web"]
+web = ["dioxus/web"]
+server = ["dioxus/server", "backend/server"]

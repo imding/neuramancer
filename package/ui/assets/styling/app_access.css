@@ -1,0 +1,15 @@
+#app-access {
+  justify-self: end
+}
+
+#app-access > #log-in {
+  background: transparent;
+  color: white;
+}
+
+#app-access > button {
+  font-size: 1rem;
+  padding: 1rem 1.5rem;
+  border: none;
+  cursor: pointer;
+}

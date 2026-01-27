@@ -1,0 +1,56 @@
+app = 'neuramancy-qdrant'
+primary_region = 'sjc'
+kill_signal = 'SIGTERM'
+kill_timeout = '5m0s'
+
+[env]
+QDRANT__SERVICE__HOST = '::'
+QDRANT__SERVICE__GRPC_PORT = '6334'
+
+[mounts]
+source = 'qdrant_storage'
+destination = '/qdrant/storage'
+
+[[services]]
+protocol = 'tcp'
+internal_port = 6333
+auto_stop_machines = 'suspend'
+min_machines_running = 0
+
+[[services.ports]]
+port = 6333
+handlers = ['http']
+
+[[services.http_checks]]
+interval = '30s'
+grace_period = '10s'
+method = 'get'
+path = '/healthz'
+protocol = 'http'
+timeout = 2000
+tls_skip_verify = false
+
+[[services]]
+protocol = 'tcp'
+internal_port = 6334
+auto_stop_machines = 'suspend'
+min_machines_running = 0
+
+[[services.ports]]
+port = 6334
+
+[services.ports.tls_options]
+alpn = ['h2']
+
+[[services.tcp_checks]]
+interval = '15s'
+grace_period = '10s'
+
+[[metrics]]
+port = 6333
+path = '/metrics'
+
+[[vm]]
+cpu_kind = 'shared'
+cpus = 1
+memory_mb = 1024

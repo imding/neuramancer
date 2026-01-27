@@ -2,7 +2,6 @@
 
 Install [Nix](https://nixos.org/download)
 
-
 Install [direnv](https://direnv.net/docs/installation.html#from-binary-builds)
 ```sh
 curl -sfL https://direnv.net/install.sh | bash
@@ -16,12 +15,32 @@ Or user shell script
 
 # Serving
 
+## Web
+
 Serve the web application
 ```bash
 dx serve -p web
 ```
 
+## Service Dependencies
+
+Serve locally via docker
+```sh
+docker compose up
+```
+
+Serve the remote Qdrant database via proxy
+```sh
+cd fly_qdrant
+# Service
+fly proxy 6334:6334
+# Dashboard
+fly proxy 6333:6333
+```
+
 # Deploy
+
+## Web
 
 Build the container image
 ```sh
@@ -33,14 +52,32 @@ Load image into Docker
 ./result | docker image load
 ```
 
+Verify image
+```sh
+docker run --rm -p 8080:8080 -e PORT=8080 -e IP=0.0.0.0 -e RUST_BACKTRACE=full -e RUST_LOG=debug neuramancy:latest
+```
+
 Tag and push image
 ```sh
+fly auth docker
 docker image tag neuramancy:latest registry.fly.io/neuramancy:latest
 docker push registry.fly.io/neuramancy:latest
 ```
 
 Fly deploy
 ```sh
+fly deploy
+```
+
+Clean-up
+```sh
+docker image rm neuramancy:latest registry.fly.io/neuramancy:latest
+```
+
+## Qdrant
+
+```sh
+cd fly_qdrant
 fly deploy
 ```
 

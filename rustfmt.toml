@@ -1,0 +1,7 @@
+binop_separator = 'Back'
+control_brace_style = 'ClosingNextLine'
+edition = '2021'
+imports_granularity = 'One'
+single_line_let_else_max_width = 0
+style_edition = '2021'
+unstable_features = true
