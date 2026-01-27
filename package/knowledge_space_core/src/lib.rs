@@ -1,6 +1,9 @@
 use {
     bevy::{core_pipeline::tonemapping::Tonemapping, prelude::*},
-    std::{f32::consts::FRAC_PI_2, sync::{Arc, Mutex}},
+    std::{
+        f32::consts::FRAC_PI_2,
+        sync::{Arc, Mutex},
+    },
 };
 
 pub struct KnowledgeSpacePlugin;
@@ -67,7 +70,8 @@ fn sync_note_cubes(
     cube_assets: Res<CubeAssets>,
     cubes: Query<(Entity, &NoteCube)>,
 ) {
-    let Some(shared_state) = shared_state else {
+    let Some(shared_state) = shared_state
+    else {
         return;
     };
 

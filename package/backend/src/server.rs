@@ -3,7 +3,7 @@
 use {
     crate::SurrealInMemory,
     dioxus::{
-        fullstack::{FullstackContext, extract::FromRef},
+        fullstack::{extract::FromRef, FullstackContext},
         prelude::*,
         server::{axum::Extension, router},
     },
