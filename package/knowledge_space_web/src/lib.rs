@@ -1,3 +1,4 @@
+#[cfg(target_arch = "wasm32")]
 use knowledge_space_core::KnowledgeSpacePlugin;
 
 #[cfg(target_arch = "wasm32")]
@@ -7,7 +8,17 @@ use bevy::{
 };
 
 #[cfg(target_arch = "wasm32")]
+use std::sync::atomic::{AtomicBool, Ordering};
+
+#[cfg(target_arch = "wasm32")]
+static BEVY_STARTED: AtomicBool = AtomicBool::new(false);
+
+#[cfg(target_arch = "wasm32")]
 pub fn start_bevy(canvas_selector: &str) {
+    if BEVY_STARTED.swap(true, Ordering::SeqCst) {
+        return;
+    }
+
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {

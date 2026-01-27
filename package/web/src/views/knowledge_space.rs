@@ -27,8 +27,6 @@ pub fn KnowledgeSpace() -> Element {
 
         div { id: "knowledge-space",
 
-            canvas { id: "bevy-render" }
-
             div { id: "controls",
 
                 br {}
