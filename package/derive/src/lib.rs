@@ -1,7 +1,7 @@
 use {
     proc_macro::TokenStream,
     quote::quote,
-    syn::{parse_macro_input, Data, DeriveInput},
+    syn::{Data, DeriveInput, parse_macro_input},
 };
 
 #[proc_macro_derive(PutId, attributes(put_ids))]

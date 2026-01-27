@@ -32,21 +32,29 @@ pub struct Snippet {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AudioSnippet {
     pub path: String,
+    #[serde(default)]
+    pub embedding: Vec<f32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ImageSnippet {
     pub path: String,
+    #[serde(default)]
+    pub embedding: Vec<f32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TextSnippet {
     pub content: String,
+    #[serde(default)]
+    pub embedding: Vec<f32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VideoSnippet {
     pub path: String,
+    #[serde(default)]
+    pub embedding: Vec<f32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, PutId)]

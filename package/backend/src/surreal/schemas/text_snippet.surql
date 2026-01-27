@@ -1,3 +1,6 @@
 DEFINE TABLE text_snippet TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
 
 DEFINE FIELD content ON text_snippet TYPE string PERMISSIONS FULL;
+DEFINE FIELD embedding ON text_snippet TYPE array<float> PERMISSIONS FULL;
+
+DEFINE INDEX text_snippet_embedding ON text_snippet FIELDS embedding HNSW DIMENSION 384 DIST COSINE TYPE F32;

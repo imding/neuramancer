@@ -1,3 +1,6 @@
 DEFINE TABLE audio_snippet TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
 
 DEFINE FIELD path ON audio_snippet TYPE string PERMISSIONS FULL;
+DEFINE FIELD embedding ON audio_snippet TYPE array<float> PERMISSIONS FULL;
+
+DEFINE INDEX audio_snippet_embedding ON audio_snippet FIELDS embedding HNSW DIMENSION 384 DIST COSINE TYPE F32;

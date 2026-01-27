@@ -1,5 +1,5 @@
 use {
-    crate::{use_notes_store, KnotEditor},
+    crate::{KnotEditor, use_notes_store},
     dioxus::{logger::tracing, prelude::*},
     schema::Knot,
 };

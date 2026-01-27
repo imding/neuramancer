@@ -3,25 +3,34 @@ use {
         prelude::*,
         window::{Window, WindowPlugin},
     },
-    knowledge_space_core::{KnowledgeSpacePlugin, KnowledgeSpaceState},
-    once_cell::sync::Lazy,
-    std::sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+    knowledge_space_core::{
+        GraphEdgeInput, GraphInputSnapshot, GraphInputState, GraphNodeInput, KnowledgeSpacePlugin,
+        SpaceTier,
     },
+    once_cell::sync::Lazy,
+    std::sync::atomic::{AtomicBool, Ordering},
 };
 
 static BEVY_STARTED: AtomicBool = AtomicBool::new(false);
 
-static SHARED_STATE: Lazy<KnowledgeSpaceState> = Lazy::new(|| KnowledgeSpaceState {
-    note_count: Arc::new(Mutex::new(0)),
-});
+static SHARED_STATE: Lazy<GraphInputState> = Lazy::new(GraphInputState::new);
 
-pub fn set_note_count(count: usize) {
-    match SHARED_STATE.note_count.lock() {
-        Ok(mut value) => *value = count,
-        Err(poisoned) => *poisoned.into_inner() = count,
-    }
+pub fn set_space_tier(tier: SpaceTier) {
+    update_snapshot(|snapshot| {
+        snapshot.tier = tier;
+    });
+}
+
+pub fn set_graph_nodes(nodes: Vec<GraphNodeInput>) {
+    update_snapshot(|snapshot| {
+        snapshot.nodes = nodes;
+    });
+}
+
+pub fn set_graph_edges(edges: Vec<GraphEdgeInput>) {
+    update_snapshot(|snapshot| {
+        snapshot.edges = edges;
+    });
 }
 
 pub fn start_bevy(canvas_selector: &str) {
@@ -42,4 +51,11 @@ pub fn start_bevy(canvas_selector: &str) {
         }))
         .add_plugins(KnowledgeSpacePlugin)
         .run();
+}
+
+fn update_snapshot(update: impl FnOnce(&mut GraphInputSnapshot)) {
+    match SHARED_STATE.shared.lock() {
+        Ok(mut snapshot) => update(&mut snapshot),
+        Err(poisoned) => update(&mut poisoned.into_inner()),
+    }
 }

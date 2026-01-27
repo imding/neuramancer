@@ -28,6 +28,32 @@
   padding-bottom: 1rem;
 }
 
+#knowledge-space > #controls > #tier-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 0.75rem);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+#knowledge-space > #controls > #tier-controls > button {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(30, 30, 30, 0.2);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#knowledge-space > #controls > #tier-controls > button.active {
+  background: #1f1f1f;
+  border-color: #1f1f1f;
+  color: #ffffff;
+}
+
 #knowledge-space > #controls > button {
   background: white;
   border: none;

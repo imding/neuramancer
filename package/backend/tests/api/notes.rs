@@ -10,6 +10,7 @@ async fn should_create_note() {
     let content = "Yes";
     let text_snippet = SnippetData::TextSnippet(TextSnippet {
         content: content.to_string(),
+        embedding: Vec::new(),
     });
 
     match backend
@@ -29,7 +30,17 @@ async fn should_create_note() {
 
             assert!(notes.len() == 1);
             assert!(notes[0].snippets.len() == 1);
-            assert!(notes[0].snippets[0].data == text_snippet);
+
+            let snippet = &notes[0].snippets[0].data;
+
+            match snippet {
+                SnippetData::TextSnippet(text) => {
+                    assert!(text.content == content);
+                    assert!(text.embedding.len() == 384);
+                }
+                _ => panic!("expected text snippet"),
+            }
+
             assert!(notes[0].id_.as_ref().unwrap() == &new_note.id);
         }
         Err(error) => {

@@ -9,6 +9,7 @@ async fn should_create_knot() {
     let mut backend = TestBackend::new().await;
     let text_snippet = SnippetData::TextSnippet(TextSnippet {
         content: "Yes".to_string(),
+        embedding: Vec::new(),
     });
     let new_note = backend
         .state

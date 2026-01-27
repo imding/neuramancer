@@ -7,6 +7,7 @@ edition = "2024"
 bevy = { workspace = true, features = [
   "bevy_asset",
   "bevy_core_pipeline",
+  "bevy_gizmos",
   "bevy_pbr",
   "bevy_render"
 ] }

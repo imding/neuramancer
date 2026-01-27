@@ -150,11 +150,12 @@
 
             buildInputs = with pkgs; [
               openssl
-              # onnxruntime
+              onnxruntime
+              stdenv.cc.cc.lib
             ];
 
-            # ORT_STRATEGY = "system";
-            # ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
+            ORT_STRATEGY = "system";
+            ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
 
             buildPhase = ''
               runHook preBuild
@@ -228,22 +229,25 @@
               # Build dependencies (needed for dx serve/bundle)
               pkg-config
               openssl
-              # onnxruntime
+              onnxruntime
+              stdenv.cc.cc.lib
 
               # Development tools
               git
               helix
               jujutsu
-              # surrealdb
+              surrealdb
               # surrealist
               surrealdb-migrations
+              tmux
             ];
 
             shellHook = ''
               export RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}
               export DISPLAY=:0
-              # export ORT_STRATEGY=system
-              # export ORT_LIB_LOCATION=${pkgs.onnxruntime}/lib
+              export ORT_STRATEGY=system
+              export ORT_LIB_LOCATION=${pkgs.onnxruntime}/lib
+              export LD_LIBRARY_PATH=${pkgs.openssl.out}/lib:${pkgs.onnxruntime}/lib:${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
             '';
           };
         };

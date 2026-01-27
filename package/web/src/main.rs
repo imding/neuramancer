@@ -45,8 +45,6 @@ fn App() -> Element {
 #[component]
 fn MainLayout() -> Element {
     let navigation = navigator();
-    let route: Route = use_route();
-    let show_knowledge_space = matches!(route, Route::KnowledgeSpace {});
 
     rsx! {
         Header {
@@ -64,13 +62,6 @@ fn MainLayout() -> Element {
                     },
                 }
             },
-        }
-
-        div {
-            id: "knowledge-space",
-            style: if show_knowledge_space { "display: block;" } else { "display: none;" },
-
-            canvas { id: "bevy-render" }
         }
 
         Outlet::<Route> {}

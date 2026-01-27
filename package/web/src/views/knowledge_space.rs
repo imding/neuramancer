@@ -1,7 +1,13 @@
 use {
+    backend::{read_knots, read_notes},
     dioxus::{logger::tracing, prelude::*},
-    knowledge_space_web::{set_note_count, start_bevy},
-    ui::{use_notes_store, GraphEditor, NoteCreator},
+    knowledge_space_web::{
+        EdgeKind, GraphEdgeInput, GraphNodeInput, MeshKind, NodeKind, SpaceTier, set_graph_edges,
+        set_graph_nodes, set_space_tier, start_bevy,
+    },
+    schema::{Knot, Note},
+    std::collections::HashSet,
+    ui::{GraphEditor, NoteCreator, use_knot_store, use_notes_store},
 };
 
 const KNOWLEDGE_SPACE_CSS: Asset = asset!("/assets/knowledge_space.css");
@@ -11,7 +17,42 @@ pub fn KnowledgeSpace() -> Element {
     let handle_config = move |_| {};
     let bevy_started = use_signal(|| false);
     let store = use_notes_store();
-    let note_count = use_memo(move || store.read().state.read().items.len());
+    let knot_store = use_knot_store();
+    let mut tier = use_signal(|| SpaceTierUi::Notes);
+    let mut selected_note_id = use_signal(|| None::<String>);
+    let mut selected_knot_id = use_signal(|| None::<String>);
+    let mut notes_resource = use_resource(read_notes);
+    let mut knots_resource = use_resource(read_knots);
+    let note_vms = use_memo(move || store.read().state.read().items.clone());
+    let store_knots = use_memo(move || {
+        knot_store
+            .read()
+            .state
+            .read()
+            .items
+            .iter()
+            .filter_map(|vm| vm.knot.clone())
+            .collect::<Vec<Knot>>()
+    });
+    let notes = use_memo(move || {
+        notes_resource()
+            .as_ref()
+            .and_then(|result| result.as_ref().ok())
+            .cloned()
+            .unwrap_or_default()
+    });
+    let _knots = use_memo(move || {
+        knots_resource()
+            .as_ref()
+            .and_then(|result| result.as_ref().ok())
+            .cloned()
+            .unwrap_or_default()
+    });
+
+    use_effect(move || {
+        store.read().refresh();
+        knot_store.read().refresh();
+    });
 
     use_future(move || {
         let mut bevy_started = bevy_started;
@@ -25,15 +66,126 @@ pub fn KnowledgeSpace() -> Element {
     });
 
     use_effect(move || {
-        set_note_count(note_count());
+        if selected_note_id().is_none() &&
+            let Some(id) = note_vms().iter().filter_map(|note| note.id.clone()).next()
+        {
+            selected_note_id.set(Some(id));
+        }
+    });
+
+    use_effect(move || {
+        if *tier.read() == SpaceTierUi::Snippets {
+            notes_resource.restart();
+        }
+    });
+
+    use_effect(move || {
+        if *tier.read() != SpaceTierUi::Snippets {
+            return;
+        }
+
+        let notes = notes();
+        if notes.is_empty() {
+            return;
+        }
+
+        let current_id = selected_note_id();
+        let has_match = current_id
+            .as_deref()
+            .map(|id| notes.iter().any(|note| note.id_.as_deref() == Some(id)))
+            .unwrap_or(false);
+
+        if !has_match && let Some(id) = notes.iter().filter_map(|note| note.id_.clone()).next() {
+            selected_note_id.set(Some(id));
+        }
+    });
+
+    use_effect(move || {
+        if selected_knot_id().is_none() &&
+            let Some(id) = store_knots()
+                .iter()
+                .filter_map(|knot| knot.id_.clone())
+                .next()
+        {
+            selected_knot_id.set(Some(id));
+        }
+    });
+
+    let nodes = use_memo({
+        let selected_note_id = selected_note_id;
+        let selected_knot_id = selected_knot_id;
+        move || match *tier.read() {
+            SpaceTierUi::Snippets => build_snippet_nodes(selected_note_id().as_deref(), &notes()),
+            SpaceTierUi::Notes => build_note_nodes(&note_vms()),
+            SpaceTierUi::KnotIntermediate => {
+                build_knot_intermediate_nodes(selected_knot_id().as_deref(), &store_knots())
+            }
+            SpaceTierUi::KnotRoot => build_knot_root_nodes(&store_knots()),
+        }
+    });
+
+    let edges = use_memo({
+        let selected_note_id = selected_note_id;
+        let selected_knot_id = selected_knot_id;
+        move || match *tier.read() {
+            SpaceTierUi::Snippets => build_snippet_edges(selected_note_id().as_deref(), &notes()),
+            SpaceTierUi::Notes => build_note_edges(&store_knots()),
+            SpaceTierUi::KnotIntermediate => {
+                build_knot_intermediate_edges(selected_knot_id().as_deref(), &store_knots())
+            }
+            SpaceTierUi::KnotRoot => Vec::new(),
+        }
+    });
+
+    use_effect(move || {
+        let current_tier = match *tier.read() {
+            SpaceTierUi::Snippets => SpaceTier::Snippet {
+                note_id: selected_note_id().unwrap_or_default(),
+            },
+            SpaceTierUi::Notes => SpaceTier::Note {
+                knot_id: selected_knot_id().unwrap_or_default(),
+            },
+            SpaceTierUi::KnotIntermediate => SpaceTier::KnotIntermediate {
+                parent_knot_id: selected_knot_id().unwrap_or_default(),
+            },
+            SpaceTierUi::KnotRoot => SpaceTier::KnotRoot,
+        };
+
+        set_space_tier(current_tier);
+        set_graph_nodes(nodes());
+        set_graph_edges(edges());
     });
 
     rsx! {
         document::Link { rel: "stylesheet", href: KNOWLEDGE_SPACE_CSS }
 
         div { id: "knowledge-space",
+            canvas { id: "bevy-render" }
 
             div { id: "controls",
+
+                div { id: "tier-controls",
+                    button {
+                        class: if *tier.read() == SpaceTierUi::Snippets { "active" } else { "" },
+                        onclick: move |_| tier.set(SpaceTierUi::Snippets),
+                        "Snippet Space"
+                    }
+                    button {
+                        class: if *tier.read() == SpaceTierUi::Notes { "active" } else { "" },
+                        onclick: move |_| tier.set(SpaceTierUi::Notes),
+                        "Note Space"
+                    }
+                    button {
+                        class: if *tier.read() == SpaceTierUi::KnotIntermediate { "active" } else { "" },
+                        onclick: move |_| tier.set(SpaceTierUi::KnotIntermediate),
+                        "Knot Intermediate"
+                    }
+                    button {
+                        class: if *tier.read() == SpaceTierUi::KnotRoot { "active" } else { "" },
+                        onclick: move |_| tier.set(SpaceTierUi::KnotRoot),
+                        "Knot Root"
+                    }
+                }
 
                 br {}
 
@@ -52,12 +204,257 @@ pub fn KnowledgeSpace() -> Element {
                     }
                 }
 
-                NoteCreator { handle_created: move |note| tracing::debug!("{note:?}") }
+                NoteCreator {
+                    handle_created: move |note| {
+                        tracing::debug!("{note:?}");
+                        notes_resource.restart();
+                        knots_resource.restart();
+                        store.read().refresh();
+                        knot_store.read().refresh();
+                    }
+                }
 
-                GraphEditor { handle_updated: move |_| tracing::debug!("Graph updated") }
+                GraphEditor {
+                    handle_updated: move |_| {
+                        notes_resource.restart();
+                        knots_resource.restart();
+                        store.read().refresh();
+                        knot_store.read().refresh();
+                    }
+                }
 
                 br {}
             }
         }
     }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum SpaceTierUi {
+    Snippets,
+    Notes,
+    KnotIntermediate,
+    KnotRoot,
+}
+
+fn build_snippet_nodes(_selected_note_id: Option<&str>, notes: &[Note]) -> Vec<GraphNodeInput> {
+    notes
+        .iter()
+        .enumerate()
+        .flat_map(|(note_index, note)| {
+            let note_id = note
+                .id_
+                .clone()
+                .unwrap_or(format!("note:unknown:{note_index}"));
+
+            note.snippets
+                .iter()
+                .enumerate()
+                .map(move |(index, snippet)| {
+                    let id = snippet
+                        .id_
+                        .clone()
+                        .unwrap_or(format!("snippet:{note_id}:{index}"));
+
+                    (note_id.clone(), id)
+                })
+        })
+        .enumerate()
+        .map(|(index, (note_id, snippet_id))| GraphNodeInput {
+            id: snippet_id,
+            kind: NodeKind::Snippet,
+            group_id: Some(note_id),
+            position: grid_position(index, 10, 1.4, 0.6),
+            mesh_kind: MeshKind::Sphere,
+            color: [118, 167, 255, 255],
+        })
+        .collect()
+}
+
+fn build_snippet_edges(_selected_note_id: Option<&str>, notes: &[Note]) -> Vec<GraphEdgeInput> {
+    notes
+        .iter()
+        .enumerate()
+        .map(|(note_index, note)| {
+            let note_id = note
+                .id_
+                .clone()
+                .unwrap_or(format!("note:unknown:{note_index}"));
+
+            note.snippets
+                .iter()
+                .enumerate()
+                .map(|(index, snippet)| {
+                    snippet
+                        .id_
+                        .clone()
+                        .unwrap_or(format!("snippet:{note_id}:{index}"))
+                })
+                .collect::<Vec<String>>()
+        })
+        .flat_map(|ids| pairwise_edges(&ids, EdgeKind::NoteMembership, false))
+        .collect()
+}
+
+fn build_note_nodes(note_vms: &[ui::NoteVm]) -> Vec<GraphNodeInput> {
+    note_vms
+        .iter()
+        .filter_map(|note| note.id.clone())
+        .enumerate()
+        .map(|(index, id)| {
+            let position = grid_position(index, 8, 2.2, 0.8);
+            GraphNodeInput {
+                id,
+                kind: NodeKind::Note,
+                group_id: None,
+                position,
+                mesh_kind: MeshKind::Cube,
+                color: [120, 210, 165, 255],
+            }
+        })
+        .collect()
+}
+
+fn build_note_edges(knots: &[Knot]) -> Vec<GraphEdgeInput> {
+    let mut edges = Vec::new();
+    for knot in knots {
+        let note_ids: Vec<String> = knot
+            .notes
+            .iter()
+            .filter_map(|note| note.id_.clone())
+            .collect();
+        edges.extend(pairwise_edges(&note_ids, EdgeKind::KnotMembership, true));
+    }
+    edges
+}
+
+fn build_knot_intermediate_nodes(
+    selected_knot_id: Option<&str>,
+    knots: &[Knot],
+) -> Vec<GraphNodeInput> {
+    let Some(knot_id) = selected_knot_id
+    else {
+        return Vec::new();
+    };
+
+    let Some(parent) = knots
+        .iter()
+        .find(|knot| knot.id_.as_deref() == Some(knot_id))
+    else {
+        return Vec::new();
+    };
+
+    let mut nodes = Vec::new();
+
+    nodes.push(GraphNodeInput {
+        id: knot_id.to_string(),
+        kind: NodeKind::Knot,
+        group_id: None,
+        position: [0.0, 0.9, 0.0],
+        mesh_kind: MeshKind::Capsule,
+        color: [252, 200, 114, 255],
+    });
+
+    let total = parent.knots.len().max(1);
+    for (index, child) in parent.knots.iter().enumerate() {
+        let Some(id) = child.id_.clone()
+        else {
+            continue;
+        };
+        let position = ring_position(index, total, 4.2, 0.8);
+        nodes.push(GraphNodeInput {
+            id,
+            kind: NodeKind::Knot,
+            group_id: Some(knot_id.to_string()),
+            position,
+            mesh_kind: MeshKind::Capsule,
+            color: [255, 170, 96, 255],
+        });
+    }
+
+    nodes
+}
+
+fn build_knot_intermediate_edges(
+    selected_knot_id: Option<&str>,
+    knots: &[Knot],
+) -> Vec<GraphEdgeInput> {
+    let Some(knot_id) = selected_knot_id
+    else {
+        return Vec::new();
+    };
+    let Some(parent) = knots
+        .iter()
+        .find(|knot| knot.id_.as_deref() == Some(knot_id))
+    else {
+        return Vec::new();
+    };
+
+    parent
+        .knots
+        .iter()
+        .filter_map(|child| child.id_.clone())
+        .map(|child_id| GraphEdgeInput {
+            from: knot_id.to_string(),
+            to: child_id,
+            kind: EdgeKind::ParentChild,
+            visible: true,
+        })
+        .collect()
+}
+
+fn build_knot_root_nodes(knots: &[Knot]) -> Vec<GraphNodeInput> {
+    let mut child_ids = HashSet::new();
+    for knot in knots {
+        for child in knot.knots.iter() {
+            if let Some(id) = child.id_.clone() {
+                child_ids.insert(id);
+            }
+        }
+    }
+
+    knots
+        .iter()
+        .filter_map(|knot| knot.id_.clone())
+        .filter(|id| !child_ids.contains(id))
+        .enumerate()
+        .map(|(index, id)| GraphNodeInput {
+            id,
+            kind: NodeKind::Knot,
+            group_id: None,
+            position: grid_position(index, 5, 3.0, 1.0),
+            mesh_kind: MeshKind::Capsule,
+            color: [250, 186, 120, 255],
+        })
+        .collect()
+}
+
+fn pairwise_edges(ids: &[String], kind: EdgeKind, visible: bool) -> Vec<GraphEdgeInput> {
+    let mut edges = Vec::new();
+    for (i, from) in ids.iter().enumerate() {
+        for to in ids.iter().skip(i + 1) {
+            edges.push(GraphEdgeInput {
+                from: from.clone(),
+                to: to.clone(),
+                kind: kind.clone(),
+                visible,
+            });
+        }
+    }
+    edges
+}
+
+fn grid_position(index: usize, per_row: usize, spacing: f32, height: f32) -> [f32; 3] {
+    let row = index / per_row;
+    let col = index % per_row;
+    let x = col as f32 * spacing - (per_row as f32 - 1.0) * spacing * 0.5;
+    let z = row as f32 * spacing;
+    [x, height, z]
+}
+
+fn ring_position(index: usize, total: usize, radius: f32, height: f32) -> [f32; 3] {
+    let angle = (index as f32 / total as f32) * std::f32::consts::TAU;
+    let x = radius * angle.cos();
+    let z = radius * angle.sin();
+    [x, height, z]
 }

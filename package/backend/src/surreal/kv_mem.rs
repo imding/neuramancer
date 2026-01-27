@@ -2,17 +2,31 @@ use {
     super::SnippetDataOrId,
     crate::{NewNote, SurrealService},
     dioxus::logger::tracing,
-    eyre::Result,
-    include_dir::{include_dir, Dir},
-    schema::{Knot, Note, SnippetData, SurrealRecord},
+    embed_anything::{
+        Dtype,
+        embeddings::{
+            embed::{EmbedImage, Embedder, EmbedderBuilder},
+            local::text_embedding::ONNXModel,
+        },
+        file_processor::audio::audio_processor::AudioDecoderModel,
+    },
+    eyre::{Result, eyre},
+    include_dir::{Dir, include_dir},
+    schema::{
+        AudioSnippet, ImageSnippet, Knot, Note, SnippetData, SurrealRecord, TextSnippet,
+        VideoSnippet,
+    },
+    std::sync::Arc,
+    tokio::sync::Mutex,
 };
 
 #[cfg(feature = "server")]
 use {
     surrealdb::{
-        engine::local::{Db, Mem},
-        error::Db as DbError,
         Error as SurrealError, Surreal,
+        engine::local::{Db, Mem},
+        error::Api as ApiError,
+        error::Db as DbError,
     },
     surrealdb_migrations::MigrationRunner,
 };
@@ -22,6 +36,9 @@ const SURREAL_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/src/surreal");
 #[derive(Clone)]
 pub struct SurrealInMemory {
     client: Surreal<Db>,
+    text_embedder: Arc<Embedder>,
+    image_embedder: Arc<Embedder>,
+    audio_decoder: Arc<Mutex<AudioDecoderModel>>,
 }
 
 impl SurrealInMemory {
@@ -35,7 +52,204 @@ impl SurrealInMemory {
             .up()
             .await?;
 
-        Ok(Self { client })
+        let text_embedder = Arc::new(
+            EmbedderBuilder::new()
+                .model_architecture("bert")
+                .onnx_model_id(Some(ONNXModel::AllMiniLML6V2))
+                .dtype(Some(Dtype::F32))
+                .from_pretrained_onnx()
+                .map_err(|error| eyre!(error))?,
+        );
+
+        let image_embedder = Arc::new(
+            EmbedderBuilder::new()
+                .model_id(Some("google/siglip-base-patch16-224"))
+                .revision(None)
+                .token(None)
+                .from_pretrained_hf()
+                .map_err(|error| eyre!(error))?,
+        );
+
+        let audio_decoder = Arc::new(Mutex::new(
+            AudioDecoderModel::from_pretrained(
+                Some("openai/whisper-tiny.en"),
+                Some("main"),
+                "tiny-en",
+                false,
+            )
+            .map_err(|error| eyre!(error))?,
+        ));
+
+        Ok(Self {
+            client,
+            text_embedder,
+            image_embedder,
+            audio_decoder,
+        })
+    }
+}
+
+impl SurrealInMemory {
+    fn embedding_error(message: impl Into<String>) -> SurrealError {
+        SurrealError::Api(ApiError::InternalError(message.into()))
+    }
+
+    async fn embed_text(&self, text: &str) -> Result<Vec<f32>, SurrealError> {
+        let embeddings = self
+            .text_embedder
+            .embed(&[text], Some(1), None)
+            .await
+            .map_err(|error| Self::embedding_error(format!("text embedding failed: {error}")))?;
+        let embedding = embeddings
+            .into_iter()
+            .next()
+            .ok_or_else(|| Self::embedding_error("text embedding returned no vectors"))?;
+
+        embedding
+            .to_dense()
+            .map_err(|error| Self::embedding_error(format!("text embedding format error: {error}")))
+    }
+
+    async fn embed_image(&self, path: &str) -> Result<Vec<f32>, SurrealError> {
+        let embedding = self
+            .image_embedder
+            .embed_image(path, None)
+            .await
+            .map_err(|error| Self::embedding_error(format!("image embedding failed: {error}")))?;
+
+        embedding.embedding.to_dense().map_err(|error| {
+            Self::embedding_error(format!("image embedding format error: {error}"))
+        })
+    }
+
+    async fn embed_transcripted_audio(&self, path: &str) -> Result<Vec<f32>, SurrealError> {
+        let transcript = {
+            let mut decoder = self.audio_decoder.lock().await;
+            let segments = decoder.process_audio(path).map_err(|error| {
+                Self::embedding_error(format!("audio transcription failed: {error}"))
+            })?;
+
+            segments
+                .iter()
+                .map(|segment| segment.dr.text.trim())
+                .filter(|text| !text.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+
+        if transcript.trim().is_empty() {
+            return Err(Self::embedding_error(
+                "audio transcription produced empty transcript",
+            ));
+        }
+
+        self.embed_text(&transcript).await
+    }
+
+    async fn ensure_embedding_for_existing_snippet(
+        &self,
+        table: &str,
+        id: &str,
+    ) -> Result<(), SurrealError> {
+        match table {
+            "text_snippet" => {
+                let mut response = self
+                    .client
+                    .query("SELECT * FROM type::thing($table, $id)")
+                    .bind(("table", table.to_string()))
+                    .bind(("id", id.to_string()))
+                    .await?;
+                let record: Option<Vec<TextSnippet>> = response.take(0)?;
+                let record = record.and_then(|mut items| items.pop()).ok_or_else(|| {
+                    Self::embedding_error(format!("snippet not found: {table}:{id}"))
+                })?;
+
+                if record.embedding.is_empty() {
+                    let embedding = self.embed_text(&record.content).await?;
+
+                    self.client
+                        .query("UPDATE type::thing($table, $id) SET embedding = $embedding")
+                        .bind(("table", table.to_string()))
+                        .bind(("id", id.to_string()))
+                        .bind(("embedding", embedding))
+                        .await?;
+                }
+            }
+            "audio_snippet" => {
+                let mut response = self
+                    .client
+                    .query("SELECT * FROM type::thing($table, $id)")
+                    .bind(("table", table.to_string()))
+                    .bind(("id", id.to_string()))
+                    .await?;
+                let record: Option<Vec<AudioSnippet>> = response.take(0)?;
+                let record = record.and_then(|mut items| items.pop()).ok_or_else(|| {
+                    Self::embedding_error(format!("snippet not found: {table}:{id}"))
+                })?;
+                if record.embedding.is_empty() {
+                    let embedding = self.embed_transcripted_audio(&record.path).await?;
+                    self.client
+                        .query("UPDATE type::thing($table, $id) SET embedding = $embedding")
+                        .bind(("table", table.to_string()))
+                        .bind(("id", id.to_string()))
+                        .bind(("embedding", embedding))
+                        .await?;
+                }
+            }
+            "image_snippet" => {
+                let mut response = self
+                    .client
+                    .query("SELECT * FROM type::thing($table, $id)")
+                    .bind(("table", table.to_string()))
+                    .bind(("id", id.to_string()))
+                    .await?;
+                let record: Option<Vec<ImageSnippet>> = response.take(0)?;
+                let record = record.and_then(|mut items| items.pop()).ok_or_else(|| {
+                    Self::embedding_error(format!("snippet not found: {table}:{id}"))
+                })?;
+
+                if record.embedding.is_empty() {
+                    let embedding = self.embed_image(&record.path).await?;
+
+                    self.client
+                        .query("UPDATE type::thing($table, $id) SET embedding = $embedding")
+                        .bind(("table", table.to_string()))
+                        .bind(("id", id.to_string()))
+                        .bind(("embedding", embedding))
+                        .await?;
+                }
+            }
+            "video_snippet" => {
+                let mut response = self
+                    .client
+                    .query("SELECT * FROM type::thing($table, $id)")
+                    .bind(("table", table.to_string()))
+                    .bind(("id", id.to_string()))
+                    .await?;
+                let record: Option<Vec<VideoSnippet>> = response.take(0)?;
+                let record = record.and_then(|mut items| items.pop()).ok_or_else(|| {
+                    Self::embedding_error(format!("snippet not found: {table}:{id}"))
+                })?;
+
+                if record.embedding.is_empty() {
+                    let embedding = self.embed_transcripted_audio(&record.path).await?;
+
+                    self.client
+                        .query("UPDATE type::thing($table, $id) SET embedding = $embedding")
+                        .bind(("table", table.to_string()))
+                        .bind(("id", id.to_string()))
+                        .bind(("embedding", embedding))
+                        .await?;
+                }
+            }
+            _ => {
+                return Err(Self::embedding_error(format!(
+                    "unsupported snippet table: {table}"
+                )));
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -43,6 +257,13 @@ impl SurrealService for SurrealInMemory {
     type Error = SurrealError;
 
     async fn create_note(&self, snippets: Vec<SnippetDataOrId>) -> Result<NewNote, Self::Error> {
+        for data_or_id in snippets.iter() {
+            if let SnippetDataOrId::Id((table, id)) = data_or_id {
+                self.ensure_embedding_for_existing_snippet(table, id)
+                    .await?;
+            }
+        }
+
         let mut draft = self
             .client
             .query("BEGIN")
@@ -51,18 +272,58 @@ impl SurrealService for SurrealInMemory {
         for (index, data_or_id) in snippets.iter().enumerate() {
             match data_or_id {
                 SnippetDataOrId::Data(data) => {
-                    let (table, field, value) = match data {
+                    let (table, field, value, embedding) = match data {
                         SnippetData::AudioSnippet(audio_snippet) => {
-                            ("audio_snippet", "path", audio_snippet.path.as_str())
+                            let embedding = if audio_snippet.embedding.is_empty() {
+                                self.embed_transcripted_audio(&audio_snippet.path).await?
+                            } else {
+                                audio_snippet.embedding.clone()
+                            };
+                            (
+                                "audio_snippet",
+                                "path",
+                                audio_snippet.path.as_str(),
+                                embedding,
+                            )
                         }
                         SnippetData::ImageSnippet(image_snippet) => {
-                            ("image_snippet", "path", image_snippet.path.as_str())
+                            let embedding = if image_snippet.embedding.is_empty() {
+                                self.embed_image(&image_snippet.path).await?
+                            } else {
+                                image_snippet.embedding.clone()
+                            };
+                            (
+                                "image_snippet",
+                                "path",
+                                image_snippet.path.as_str(),
+                                embedding,
+                            )
                         }
                         SnippetData::TextSnippet(text_snippet) => {
-                            ("text_snippet", "content", text_snippet.content.as_str())
+                            let embedding = if text_snippet.embedding.is_empty() {
+                                self.embed_text(&text_snippet.content).await?
+                            } else {
+                                text_snippet.embedding.clone()
+                            };
+                            (
+                                "text_snippet",
+                                "content",
+                                text_snippet.content.as_str(),
+                                embedding,
+                            )
                         }
                         SnippetData::VideoSnippet(video_snippet) => {
-                            ("video_snippet", "path", video_snippet.path.as_str())
+                            let embedding = if video_snippet.embedding.is_empty() {
+                                self.embed_transcripted_audio(&video_snippet.path).await?
+                            } else {
+                                video_snippet.embedding.clone()
+                            };
+                            (
+                                "video_snippet",
+                                "path",
+                                video_snippet.path.as_str(),
+                                embedding,
+                            )
                         }
                     };
 
@@ -70,9 +331,10 @@ impl SurrealService for SurrealInMemory {
 
                     draft = draft
                         .query(format!(
-                            "LET $snippet{index} = CREATE ONLY {table} SET {field} = $value{index}"
+                            "LET $snippet{index} = CREATE ONLY {table} SET {field} = $value{index}, embedding = $embedding{index}"
                         ))
                         .bind((format!("value{index}"), value.to_string()))
+                        .bind((format!("embedding{index}"), embedding))
                         .query(format!("RELATE $note->contain->$snippet{index}"));
                 }
                 SnippetDataOrId::Id((table, id)) => {
@@ -148,12 +410,15 @@ impl SurrealService for SurrealInMemory {
         note_ids: Vec<String>,
         knot_ids: Vec<String>,
     ) -> Result<Knot, Self::Error> {
-        let mut draft = self
-            .client
-            .query("BEGIN")
+        let mut statement_index = 0usize;
+        let mut draft = self.client.query("BEGIN");
+
+        draft = draft
             .query("LET $knot = CREATE knot SET label = $label, intent = $intent")
             .bind(("label", label))
             .bind(("intent", intent));
+
+        statement_index += 1;
 
         // Validate that all provided note IDs exist
         for (idx, note_id) in note_ids.iter().enumerate() {
@@ -165,6 +430,8 @@ impl SurrealService for SurrealInMemory {
                 .query(format!(
                     "IF array::len($note{idx}) == 0 {{ THROW 'Note not found: ' + $note_id{idx} }}"
                 ));
+
+            statement_index += 2;
         }
 
         // Validate that all provided knot IDs exist
@@ -173,6 +440,8 @@ impl SurrealService for SurrealInMemory {
                 .query(format!("LET $existing_knot{idx} = SELECT * FROM type::thing('knot', $knot_id{idx})"))
                 .bind((format!("knot_id{idx}"), knot_id.clone()))
                 .query(format!("IF array::len($existing_knot{idx}) == 0 {{ THROW 'Knot not found: ' + $knot_id{idx} }}"));
+
+            statement_index += 2;
         }
 
         // Create converge relationships for notes
@@ -183,6 +452,8 @@ impl SurrealService for SurrealInMemory {
                 ))
                 .bind((format!("note_id{idx}"), note_id.clone()))
                 .query(format!("RELATE $note_record{idx}->converge->$knot"));
+
+            statement_index += 2;
         }
 
         // Create converge relationships for knots
@@ -193,21 +464,26 @@ impl SurrealService for SurrealInMemory {
                 ))
                 .bind((format!("knot_id{idx}"), knot_id.clone()))
                 .query(format!("RELATE $knot_record{idx}->converge->$knot"));
+
+            statement_index += 2;
         }
 
-        let mut response = draft
-            .query(
-                "SELECT *,
-                    <-converge<-note AS notes,
-                    <-converge<-knot AS knots
-                FROM $knot FETCH notes, knots",
-            )
-            .query("COMMIT")
-            .await?;
+        let select_index = statement_index;
+
+        draft = draft.query(
+            "SELECT *,
+                <-converge<-note AS notes,
+                <-converge<-knot AS knots
+            FROM $knot FETCH notes, knots",
+        );
+
+        draft = draft.query("COMMIT");
+
+        let mut response = draft.await?;
 
         tracing::debug!("{response:?}");
 
-        let knots: Vec<Knot> = response.take(5)?;
+        let knots: Vec<Knot> = response.take(select_index)?;
         let maybe_knot = knots.into_iter().next();
 
         match maybe_knot {
