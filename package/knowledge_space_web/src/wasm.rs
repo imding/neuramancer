@@ -9,10 +9,10 @@ use {
     },
     once_cell::sync::Lazy,
     std::sync::atomic::{AtomicBool, Ordering},
+    web_sys::{Event, window},
 };
 
 static BEVY_STARTED: AtomicBool = AtomicBool::new(false);
-
 static SHARED_STATE: Lazy<GraphInputState> = Lazy::new(GraphInputState::new);
 
 pub fn set_space_tier(tier: SpaceTier) {
@@ -50,7 +50,21 @@ pub fn start_bevy(canvas_selector: &str) {
             ..default()
         }))
         .add_plugins(KnowledgeSpacePlugin)
+        .add_systems(Startup, mark_bevy_ready)
         .run();
+}
+
+fn mark_bevy_ready() {
+    let Some(window) = window()
+    else {
+        return;
+    };
+    let Ok(event) = Event::new("bevy:ready")
+    else {
+        return;
+    };
+
+    let _ = window.dispatch_event(&event);
 }
 
 fn update_snapshot(update: impl FnOnce(&mut GraphInputSnapshot)) {

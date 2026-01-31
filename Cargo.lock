@@ -7691,6 +7691,7 @@ dependencies = [
  "bevy",
  "knowledge_space_core",
  "once_cell",
+ "web-sys",
 ]
 
 [[package]]
@@ -13969,6 +13970,8 @@ dependencies = [
  "schema",
  "tokio",
  "ui",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

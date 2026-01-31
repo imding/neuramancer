@@ -19,3 +19,4 @@ bevy = { workspace = true, features = [
 ] }
 
 once_cell.workspace = true
+web-sys = { version = "0.3.85", features = ["Event", "Window"] }

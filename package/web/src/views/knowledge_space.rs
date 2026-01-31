@@ -3,7 +3,7 @@ use {
     dioxus::{logger::tracing, prelude::*},
     knowledge_space_web::{
         EdgeKind, GraphEdgeInput, GraphNodeInput, MeshKind, NodeKind, SpaceTier, set_graph_edges,
-        set_graph_nodes, set_space_tier, start_bevy,
+        set_graph_nodes, set_space_tier,
     },
     schema::{Knot, Note},
     std::collections::HashSet,
@@ -15,7 +15,6 @@ const KNOWLEDGE_SPACE_CSS: Asset = asset!("/assets/knowledge_space.css");
 #[component]
 pub fn KnowledgeSpace() -> Element {
     let handle_config = move |_| {};
-    let bevy_started = use_signal(|| false);
     let store = use_notes_store();
     let knot_store = use_knot_store();
     let mut tier = use_signal(|| SpaceTierUi::Notes);
@@ -52,17 +51,6 @@ pub fn KnowledgeSpace() -> Element {
     use_effect(move || {
         store.read().refresh();
         knot_store.read().refresh();
-    });
-
-    use_future(move || {
-        let mut bevy_started = bevy_started;
-
-        async move {
-            if !bevy_started() {
-                bevy_started.set(true);
-                start_bevy("#bevy-render");
-            }
-        }
     });
 
     use_effect(move || {
@@ -160,8 +148,6 @@ pub fn KnowledgeSpace() -> Element {
         document::Link { rel: "stylesheet", href: KNOWLEDGE_SPACE_CSS }
 
         div { id: "knowledge-space",
-            canvas { id: "bevy-render" }
-
             div { id: "controls",
 
                 div { id: "tier-controls",

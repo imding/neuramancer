@@ -15,6 +15,10 @@ dioxus = { workspace = true, features = ["fullstack", "router"] }
 
 tokio = { workspace = true, optional = true }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen.workspace = true
+web-sys.workspace = true
+
 [features]
 default = ["server", "web"]
 web = ["dioxus/web"]
