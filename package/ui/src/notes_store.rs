@@ -1,6 +1,6 @@
 use {
     crate::optimistic::{Inflight, InflightKind, OpId, run_optimistic_with_inflight, run_refresh},
-    backend::NewNote,
+    backend::{NewNote, delete_note, read_notes, save_note},
     dioxus::{logger::tracing, prelude::*},
     std::collections::HashMap,
 };
@@ -77,14 +77,17 @@ pub fn NotesStoreProvider(children: Element) -> Element {
     // Hydrate once on mount.
     use_future(move || {
         let store = store;
+
         async move {
             // Copy the signal handles out synchronously to avoid holding a read guard across `.await`.
             let (state, inflight) = {
                 let s = store.read();
+
                 (s.state, s.inflight)
             };
 
             let tmp = NotesStore { state, inflight };
+
             tmp.refresh();
         }
     });
@@ -103,7 +106,7 @@ impl NotesStore {
         run_refresh(
             state,
             inflight,
-            || async { backend::read_notes().await },
+            || async { read_notes().await },
             |s, _op_id, server_notes| {
                 // Preserve any still-pending creates to avoid them disappearing during refresh.
                 let pending: Vec<NoteVm> = s
@@ -158,7 +161,7 @@ impl NotesStore {
             state,
             inflight,
             InflightKind::Create,
-            move || async move { backend::save_note(content).await },
+            move || async move { save_note(content).await },
             |s, op_id| {
                 let temp_key = format!("temp:{op_id}");
                 let vm = NoteVm {
@@ -215,7 +218,7 @@ impl NotesStore {
             InflightKind::Delete,
             {
                 let id = id.clone();
-                move || async move { backend::delete_note(id).await }
+                move || async move { delete_note(id).await }
             },
             move |s, op_id| {
                 let removed = remove_by_id(s, &id_for_optimistic);

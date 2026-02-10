@@ -11,5 +11,5 @@ pub use wasm::{set_graph_edges, set_graph_nodes, set_space_tier, start_bevy};
 pub use native::{set_graph_edges, set_graph_nodes, set_space_tier, start_bevy};
 
 pub use knowledge_space_core::{
-    EdgeKind, GraphEdgeInput, GraphNodeInput, MeshKind, NodeKind, SpaceTier,
+    EdgeKind, GraphEdgeInput, GraphNodeInput, MeshKind, NodeKind, SpaceTier, builder,
 };

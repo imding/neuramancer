@@ -1,3 +1,5 @@
+pub mod builder;
+
 use {
     bevy::{core_pipeline::tonemapping::Tonemapping, prelude::*},
     std::{
@@ -18,9 +20,9 @@ impl Plugin for KnowledgeSpacePlugin {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SpaceTier {
-    Snippet { note_id: String },
-    Note { knot_id: String },
-    KnotIntermediate { parent_knot_id: String },
+    Snippet,
+    Note,
+    KnotIntermediate,
     KnotRoot,
 }
 
