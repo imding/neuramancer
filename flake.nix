@@ -127,7 +127,8 @@
               || (lib.hasInfix "/surreal/migrations" path)
               || (lib.hasInfix "/surreal/schemas" path)
               || (lib.hasInfix "/surreal/events" path)
-              || (lib.hasSuffix ".surrealdb" path);
+              || (lib.hasSuffix ".surrealdb" path)
+              || (lib.hasSuffix "tailwind.css" path);
           };
 
           web = craneLib.buildPackage {
@@ -145,6 +146,7 @@
               binaryen
               dioxus-cli_0_7_3
               pkg-config
+              tailwindcss_4
               wasm-bindgen-cli_0_2_108
             ];
 
@@ -224,6 +226,7 @@
 
               # Rust/Dioxus tools
               dioxus-cli_0_7_3
+              tailwindcss_4
               wasm-bindgen-cli_0_2_108
 
               # Build dependencies (needed for dx serve/bundle)

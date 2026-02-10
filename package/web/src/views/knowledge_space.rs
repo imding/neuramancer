@@ -12,14 +12,20 @@ use {
     ui::{GraphEditor, KnotStore, NoteCreator, use_knot_store, use_notes_store},
 };
 
-const KNOWLEDGE_SPACE_CSS: Asset = asset!("/assets/knowledge_space.css");
-
 #[derive(Clone, Copy, PartialEq)]
 enum SpaceTierUi {
     Snippets,
     Notes,
     KnotIntermediate,
     KnotRoot,
+}
+
+fn tier_class(active: bool) -> &'static str {
+    if active {
+        "bg-[#1f1f1f] border border-[#1f1f1f] text-white rounded-full py-[0.45rem] px-[0.9rem] font-semibold cursor-pointer"
+    } else {
+        "bg-white/95 border border-black/20 rounded-full py-[0.45rem] px-[0.9rem] font-semibold cursor-pointer"
+    }
 }
 
 #[component]
@@ -92,28 +98,26 @@ pub fn KnowledgeSpace() -> Element {
     });
 
     rsx! {
-        document::Link { rel: "stylesheet", href: KNOWLEDGE_SPACE_CSS }
-
-        div { id: "knowledge-space",
-            div { id: "controls",
-                div { id: "tier-controls",
+        div { class: "absolute top-0 w-screen h-screen",
+            div { class: "grid grid-cols-[1fr_80px_120px_80px_1fr] items-end gap-8 absolute bottom-0 w-screen pb-4",
+                div { class: "absolute left-0 right-0 bottom-[calc(100%+0.75rem)] flex flex-wrap justify-center gap-2",
                     button {
-                        class: if *tier.read() == SpaceTierUi::Snippets { "active" } else { "" },
+                        class: tier_class(*tier.read() == SpaceTierUi::Snippets),
                         onclick: move |_| tier.set(SpaceTierUi::Snippets),
                         "Snippet Space"
                     }
                     button {
-                        class: if *tier.read() == SpaceTierUi::Notes { "active" } else { "" },
+                        class: tier_class(*tier.read() == SpaceTierUi::Notes),
                         onclick: move |_| tier.set(SpaceTierUi::Notes),
                         "Note Space"
                     }
                     button {
-                        class: if *tier.read() == SpaceTierUi::KnotIntermediate { "active" } else { "" },
+                        class: tier_class(*tier.read() == SpaceTierUi::KnotIntermediate),
                         onclick: move |_| tier.set(SpaceTierUi::KnotIntermediate),
                         "Knot Intermediate"
                     }
                     button {
-                        class: if *tier.read() == SpaceTierUi::KnotRoot { "active" } else { "" },
+                        class: tier_class(*tier.read() == SpaceTierUi::KnotRoot),
                         onclick: move |_| tier.set(SpaceTierUi::KnotRoot),
                         "Knot Root"
                     }
@@ -121,7 +125,9 @@ pub fn KnowledgeSpace() -> Element {
 
                 br {}
 
-                button { onclick: handle_config,
+                button {
+                    class: "bg-white border-none p-4 cursor-pointer rounded-full [&_svg]:w-full [&_svg]:h-full",
+                    onclick: handle_config,
                     svg {
                         xmlns: "http://www.w3.org/2000/svg",
                         width: "512",

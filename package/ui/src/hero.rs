@@ -1,15 +1,11 @@
 use dioxus::prelude::*;
 
-const HERO_CSS: Asset = asset!("/assets/styling/hero.css");
-
 #[component]
 pub fn Hero() -> Element {
     rsx! {
-        document::Link { rel: "stylesheet", href: HERO_CSS }
+        div { class: "grid place-content-center text-center gap-4",
 
-        div { id: "hero",
-
-            div { id: "pitch",
+            div { class: "w-[65ch]",
 
                 h1 { "Neuramancy" }
                 p {
@@ -17,9 +13,13 @@ pub fn Hero() -> Element {
                 }
             }
 
-            div { id: "cta",
-                button { id: "sign-up", "Sign-up" }
-                button { id: "watch-video", "Watch video" }
+            div { class: "grid grid-flow-col gap-4",
+                button { class: "text-xl p-4 border-none rounded-full cursor-pointer bg-[oklch(70.2%_0.183_293.541)] text-[oklch(25.7%_0.09_281.288)]",
+                    "Sign-up"
+                }
+                button { class: "text-xl p-4 border-none rounded-full cursor-pointer",
+                    "Watch video"
+                }
             }
         }
     }

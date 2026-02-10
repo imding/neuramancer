@@ -4,8 +4,6 @@ use {
     schema::Knot,
 };
 
-const GRAPH_EDITOR_CSS: Asset = asset!("/assets/styling/graph_editor.css");
-
 #[derive(Clone, PartialEq, Props)]
 pub struct GraphEditorProps {
     handle_updated: Option<Callback<()>>,
@@ -22,8 +20,9 @@ pub fn GraphEditor(props: GraphEditorProps) -> Element {
     let mut active_tab = use_signal(|| Tab::Notes);
 
     rsx! {
-        document::Link { rel: "stylesheet", href: GRAPH_EDITOR_CSS }
-        button { id: "graph-editor-trigger", popovertarget: "graph-editor",
+        button {
+            class: "bg-white border-none p-4 cursor-pointer rounded-full [&_svg]:w-full [&_svg]:h-full",
+            popovertarget: "graph-editor",
 
             svg {
                 xmlns: "http://www.w3.org/2000/svg",
@@ -38,24 +37,35 @@ pub fn GraphEditor(props: GraphEditorProps) -> Element {
             }
         }
 
-        div { id: "graph-editor", popover: "auto",
+        div {
+            id: "graph-editor",
+            popover: "auto",
+            class: "w-[480px] bg-[#1e222d] p-5 rounded-[10px] gap-4 border-none",
 
-            h4 { "Graph Editor" }
+            h4 { class: "mb-[15px] text-white", "Graph Editor" }
 
-            div { id: "tab-buttons",
+            div { class: "grid grid-cols-2 gap-2 mb-4",
                 button {
-                    class: if *active_tab.read() == Tab::Notes { "active" } else { "" },
+                    class: if *active_tab.read() == Tab::Notes {
+                        "py-2 px-4 border border-[#6d85c6] bg-[#6d85c6] text-white rounded cursor-pointer transition-all duration-200"
+                    } else {
+                        "py-2 px-4 border border-[#444] bg-[#2a2e3a] text-[#ccc] rounded cursor-pointer transition-all duration-200 hover:bg-[#3a3e4a] hover:text-white"
+                    },
                     onclick: move |_| active_tab.set(Tab::Notes),
                     "Notes"
                 }
                 button {
-                    class: if *active_tab.read() == Tab::Knots { "active" } else { "" },
+                    class: if *active_tab.read() == Tab::Knots {
+                        "py-2 px-4 border border-[#6d85c6] bg-[#6d85c6] text-white rounded cursor-pointer transition-all duration-200"
+                    } else {
+                        "py-2 px-4 border border-[#444] bg-[#2a2e3a] text-[#ccc] rounded cursor-pointer transition-all duration-200 hover:bg-[#3a3e4a] hover:text-white"
+                    },
                     onclick: move |_| active_tab.set(Tab::Knots),
                     "Knots"
                 }
             }
 
-            div { id: "tab-content",
+            div { class: "min-h-[300px]",
 
                 match *active_tab.read() {
                     Tab::Notes => rsx! {
@@ -81,25 +91,25 @@ fn NotesTab() -> Element {
     rsx! {
         match notes.is_empty() {
             true => rsx! {
-                p { class: "empty-state", "No notes found" }
+                p { class: "text-[#888] text-center py-10 px-5 italic", "No notes found" }
             },
             _ => rsx! {
                 for note in notes {
-                    div { class: "note-item",
+                    div { class: "grid grid-cols-[1fr_auto] grid-rows-[auto_auto_auto] gap-x-3 gap-y-1 p-3 bg-[#2a2e3a] rounded-[6px] mb-2 items-start",
                         match note.id.clone() {
                             Some(id) => rsx! {
-                                p { "Note ID: {id}" }
+                                p { class: "text-[#ccc] text-sm col-span-1", "Note ID: {id}" }
                             },
                             None => rsx! {
-                                p { "Note ID: (pending)" }
+                                p { class: "text-[#ccc] text-sm col-span-1", "Note ID: (pending)" }
                             },
                         }
-                        p { "Snippets: {note.snippet_count}" }
+                        p { class: "text-[#ccc] text-sm col-span-1", "Snippets: {note.snippet_count}" }
 
                         match note.id.clone() {
                             Some(id) => rsx! {
                                 button {
-                                    class: "delete-button",
+                                    class: "col-start-2 row-span-full self-center py-1.5 px-3 bg-[#dc3545] text-white border-none rounded cursor-pointer text-xs transition-colors duration-200 hover:bg-[#c82333]",
                                     onclick: move |_| {
                                         store.read().delete_note_optimistic(id.clone());
                                     },
@@ -139,7 +149,7 @@ fn KnotsTab(props: KnotsTabProps) -> Element {
             }
         } else {
             button {
-                id: "create-knot-button",
+                class: "py-2.5 px-4 bg-[#28a745] text-white border-none rounded cursor-pointer mb-4 transition-colors duration-200 hover:bg-[#218838]",
                 onclick: move |_| show_knot_editor.set(true),
                 "Create New Knot"
             }
@@ -147,7 +157,7 @@ fn KnotsTab(props: KnotsTabProps) -> Element {
             match knots() {
                 Some(Ok(knots_data)) => rsx! {
                     if knots_data.is_empty() {
-                        p { class: "empty-state", "No knots found" }
+                        p { class: "text-[#888] text-center py-10 px-5 italic", "No knots found" }
                     } else {
                         for knot in knots_data {
                             KnotItem {
@@ -159,10 +169,10 @@ fn KnotsTab(props: KnotsTabProps) -> Element {
                     }
                 },
                 Some(Err(error)) => rsx! {
-                    p { class: "error", "Error loading knots: {error}" }
+                    p { class: "text-[#dc3545] text-center p-5", "Error loading knots: {error}" }
                 },
                 None => rsx! {
-                    p { class: "loading", "Loading knots..." }
+                    p { class: "text-[#6d85c6] text-center p-5", "Loading knots..." }
                 },
             }
         }
@@ -185,13 +195,13 @@ fn KnotItem(props: KnotItemProps) -> Element {
     };
 
     rsx! {
-        div { class: "knot-item",
-            p { class: "knot-label", "{props.knot.label}" }
-            p { class: "knot-intent", "{props.knot.intent}" }
-            p { "Notes: {props.knot.notes.len()}, Knots: {props.knot.knots.len()}" }
+        div { class: "grid grid-cols-[1fr_auto] grid-rows-[auto_auto_auto] gap-x-3 gap-y-1 p-3 bg-[#2a2e3a] rounded-[6px] mb-2 items-start",
+            p { class: "text-[#ccc] text-sm col-span-1", "{props.knot.label}" }
+            p { class: "text-white font-medium col-span-1", "{props.knot.intent}" }
+            p { class: "text-[#ccc] text-sm col-span-1", "Notes: {props.knot.notes.len()}, Knots: {props.knot.knots.len()}" }
 
             button {
-                class: "delete-button",
+                class: "col-start-2 row-span-full self-center py-1.5 px-3 bg-[#dc3545] text-white border-none rounded cursor-pointer text-xs transition-colors duration-200 hover:bg-[#c82333]",
                 onclick: {
                     let id = id.clone();
                     move |_| {

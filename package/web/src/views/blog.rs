@@ -1,13 +1,9 @@
 use {crate::Route, dioxus::prelude::*};
 
-const BLOG_CSS: Asset = asset!("/assets/blog.css");
-
 #[component]
 pub fn Blog(id: i32) -> Element {
     rsx! {
-        document::Link { rel: "stylesheet", href: BLOG_CSS }
-
-        div { id: "blog",
+        div { class: "mt-[50px]",
 
             // Content
             h1 { "This is blog #{id}!" }
@@ -16,9 +12,9 @@ pub fn Blog(id: i32) -> Element {
             }
 
             // Navigation links
-            Link { to: Route::Blog { id: id - 1 }, "Previous" }
+            Link { class: "text-white mt-[50px]", to: Route::Blog { id: id - 1 }, "Previous" }
             span { " <---> " }
-            Link { to: Route::Blog { id: id + 1 }, "Next" }
+            Link { class: "text-white mt-[50px]", to: Route::Blog { id: id + 1 }, "Next" }
         }
     }
 }
