@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 #[component]
 pub fn Header(left: Element, right: Element) -> Element {
     rsx! {
-        div { class: "relative grid grid-cols-[1fr_min-content_1fr] items-center w-screen z-[99]",
+        div { class: "relative grid grid-cols-[1fr_min-content_1fr] items-center w-screen z-[99] pointer-events-auto",
 
             {left}
 

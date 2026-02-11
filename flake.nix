@@ -152,6 +152,7 @@
 
             buildInputs = with pkgs; [
               openssl
+              openblas
               onnxruntime
               stdenv.cc.cc.lib
             ];
@@ -232,6 +233,7 @@
               # Build dependencies (needed for dx serve/bundle)
               pkg-config
               openssl
+              openblas
               onnxruntime
               stdenv.cc.cc.lib
 
@@ -250,7 +252,7 @@
               export DISPLAY=:0
               export ORT_STRATEGY=system
               export ORT_LIB_LOCATION=${pkgs.onnxruntime}/lib
-              export LD_LIBRARY_PATH=${pkgs.openssl.out}/lib:${pkgs.onnxruntime}/lib:${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
+              export LD_LIBRARY_PATH=${pkgs.openssl.out}/lib:${pkgs.onnxruntime}/lib:${pkgs.openblas}/lib:${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
             '';
           };
         };

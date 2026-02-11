@@ -19,13 +19,15 @@
   }
   #main {
     height: 100vh;
+    pointer-events: none;
   }
   #bevy-layer {
     position: fixed;
     inset: 0;
-    z-index: -99;
+    z-index: 0;
     opacity: 0;
     transition: opacity 480ms ease;
+    pointer-events: auto;
   }
   #bevy-layer.ready {
     opacity: 1;

@@ -6,7 +6,7 @@ use {
 #[component]
 pub fn Home() -> Element {
     rsx! {
-        div { class: "grid justify-center gap-8",
+        div { class: "grid justify-center gap-8 pointer-events-auto",
 
             Hero {}
             Demo {}

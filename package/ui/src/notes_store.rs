@@ -50,6 +50,10 @@ pub struct NoteVm {
     /// Snippet count for display.
     pub snippet_count: usize,
 
+    /// Embedding vectors from all snippets in this note.
+    /// Each entry is the raw embedding of one snippet.
+    pub embeddings: Vec<Vec<f32>>,
+
     pub status: NoteStatus,
 
     /// The last op that mutated this entity. Can be used to guard against out-of-order
@@ -118,16 +122,26 @@ impl NotesStore {
 
                 let mut vms: Vec<NoteVm> = server_notes
                     .into_iter()
-                    .map(|note| NoteVm {
-                        id: note.id_.clone(),
-                        local_key: note
-                            .id_
-                            .clone()
-                            .map(|id| format!("note:{id}"))
-                            .unwrap_or_else(|| "note:unknown".to_string()),
-                        snippet_count: note.snippets.len(),
-                        status: NoteStatus::Saved,
-                        last_op: None,
+                    .map(|note| {
+                        let embeddings: Vec<Vec<f32>> = note
+                            .snippets
+                            .iter()
+                            .map(|snippet| snippet.data.embedding().to_vec())
+                            .filter(|e| !e.is_empty())
+                            .collect();
+
+                        NoteVm {
+                            id: note.id_.clone(),
+                            local_key: note
+                                .id_
+                                .clone()
+                                .map(|id| format!("note:{id}"))
+                                .unwrap_or_else(|| "note:unknown".to_string()),
+                            snippet_count: note.snippets.len(),
+                            embeddings,
+                            status: NoteStatus::Saved,
+                            last_op: None,
+                        }
                     })
                     .collect();
 
@@ -168,6 +182,7 @@ impl NotesStore {
                     id: None,
                     local_key: format!("note:{temp_key}"),
                     snippet_count: 0,
+                    embeddings: Vec::new(),
                     status: NoteStatus::PendingCreate {
                         op_id,
                         temp_key: temp_key.clone(),

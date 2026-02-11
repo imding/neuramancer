@@ -44,28 +44,29 @@ pub fn GraphEditor(props: GraphEditorProps) -> Element {
 
             h4 { class: "mb-[15px] text-white", "Graph Editor" }
 
-            div { class: "grid grid-cols-2 gap-2 mb-4",
+            div {
+                class: "grid grid-cols-2 gap-2 mb-4",
+
                 button {
-                    class: if *active_tab.read() == Tab::Notes {
-                        "py-2 px-4 border border-[#6d85c6] bg-[#6d85c6] text-white rounded cursor-pointer transition-all duration-200"
-                    } else {
-                        "py-2 px-4 border border-[#444] bg-[#2a2e3a] text-[#ccc] rounded cursor-pointer transition-all duration-200 hover:bg-[#3a3e4a] hover:text-white"
+                    class: match *active_tab.read() {
+                        Tab::Notes => "py-2 px-4 border border-[#6d85c6] bg-[#6d85c6] text-white rounded cursor-pointer transition-all duration-200",
+                        _ => "py-2 px-4 border border-[#444] bg-[#2a2e3a] text-[#ccc] rounded cursor-pointer transition-all duration-200 hover:bg-[#3a3e4a] hover:text-white"
                     },
                     onclick: move |_| active_tab.set(Tab::Notes),
                     "Notes"
                 }
                 button {
-                    class: if *active_tab.read() == Tab::Knots {
-                        "py-2 px-4 border border-[#6d85c6] bg-[#6d85c6] text-white rounded cursor-pointer transition-all duration-200"
-                    } else {
-                        "py-2 px-4 border border-[#444] bg-[#2a2e3a] text-[#ccc] rounded cursor-pointer transition-all duration-200 hover:bg-[#3a3e4a] hover:text-white"
+                    class: match *active_tab.read() {
+                        Tab::Knots => "py-2 px-4 border border-[#6d85c6] bg-[#6d85c6] text-white rounded cursor-pointer transition-all duration-200",
+                        _ => "py-2 px-4 border border-[#444] bg-[#2a2e3a] text-[#ccc] rounded cursor-pointer transition-all duration-200 hover:bg-[#3a3e4a] hover:text-white"
                     },
                     onclick: move |_| active_tab.set(Tab::Knots),
                     "Knots"
                 }
             }
 
-            div { class: "min-h-[300px]",
+            div {
+                class: "min-h-[300px]",
 
                 match *active_tab.read() {
                     Tab::Notes => rsx! {
@@ -79,9 +80,6 @@ pub fn GraphEditor(props: GraphEditorProps) -> Element {
         }
     }
 }
-
-#[derive(Clone, PartialEq, Props)]
-struct NotesTabProps {}
 
 #[component]
 fn NotesTab() -> Element {

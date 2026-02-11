@@ -3,4 +3,4 @@ DEFINE TABLE video_snippet TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
 DEFINE FIELD path ON video_snippet TYPE string PERMISSIONS FULL;
 DEFINE FIELD embedding ON video_snippet TYPE array<float> PERMISSIONS FULL;
 
-DEFINE INDEX video_snippet_embedding ON video_snippet FIELDS embedding HNSW DIMENSION 384 DIST COSINE TYPE F32;
+DEFINE INDEX video_snippet_embedding ON video_snippet FIELDS embedding HNSW DIMENSION 768 DIST COSINE TYPE F32;

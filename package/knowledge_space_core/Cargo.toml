@@ -4,10 +4,4 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { workspace = true, features = [
-  "bevy_asset",
-  "bevy_core_pipeline",
-  "bevy_gizmos",
-  "bevy_pbr",
-  "bevy_render"
-] }
+glyph_core.workspace = true

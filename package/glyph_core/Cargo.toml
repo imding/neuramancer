@@ -1,0 +1,12 @@
+[package]
+name = "glyph_core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ndarray.workspace = true
+pacmap = { workspace = true, optional = true }
+
+[features]
+default = []
+pacmap = ["dep:pacmap"]

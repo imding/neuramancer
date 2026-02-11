@@ -3,11 +3,7 @@ use {
     crate::{NewNote, SurrealService},
     dioxus::logger::tracing,
     embed_anything::{
-        Dtype,
-        embeddings::{
-            embed::{EmbedImage, Embedder, EmbedderBuilder},
-            local::text_embedding::ONNXModel,
-        },
+        embeddings::embed::{EmbedImage, Embedder, EmbedderBuilder},
         file_processor::audio::audio_processor::AudioDecoderModel,
     },
     eyre::{Result, eyre},
@@ -36,8 +32,7 @@ const SURREAL_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/src/surreal");
 #[derive(Clone)]
 pub struct SurrealInMemory {
     client: Surreal<Db>,
-    text_embedder: Arc<Embedder>,
-    image_embedder: Arc<Embedder>,
+    embedder: Arc<Embedder>,
     audio_decoder: Arc<Mutex<AudioDecoderModel>>,
 }
 
@@ -52,16 +47,9 @@ impl SurrealInMemory {
             .up()
             .await?;
 
-        let text_embedder = Arc::new(
-            EmbedderBuilder::new()
-                .model_architecture("bert")
-                .onnx_model_id(Some(ONNXModel::AllMiniLML6V2))
-                .dtype(Some(Dtype::F32))
-                .from_pretrained_onnx()
-                .map_err(|error| eyre!(error))?,
-        );
-
-        let image_embedder = Arc::new(
+        // Single cross-modal embedder: SigLIP supports both text and image
+        // embedding in a shared 768-dimensional vector space.
+        let embedder = Arc::new(
             EmbedderBuilder::new()
                 .model_id(Some("google/siglip-base-patch16-224"))
                 .revision(None)
@@ -82,8 +70,7 @@ impl SurrealInMemory {
 
         Ok(Self {
             client,
-            text_embedder,
-            image_embedder,
+            embedder,
             audio_decoder,
         })
     }
@@ -96,7 +83,7 @@ impl SurrealInMemory {
 
     async fn embed_text(&self, text: &str) -> Result<Vec<f32>, SurrealError> {
         let embeddings = self
-            .text_embedder
+            .embedder
             .embed(&[text], Some(1), None)
             .await
             .map_err(|error| Self::embedding_error(format!("text embedding failed: {error}")))?;
@@ -112,7 +99,7 @@ impl SurrealInMemory {
 
     async fn embed_image(&self, path: &str) -> Result<Vec<f32>, SurrealError> {
         let embedding = self
-            .image_embedder
+            .embedder
             .embed_image(path, None)
             .await
             .map_err(|error| Self::embedding_error(format!("image embedding failed: {error}")))?;

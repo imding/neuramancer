@@ -23,7 +23,8 @@ enum SpaceTierUi {
 fn tier_class(active: bool) -> &'static str {
     if active {
         "bg-[#1f1f1f] border border-[#1f1f1f] text-white rounded-full py-[0.45rem] px-[0.9rem] font-semibold cursor-pointer"
-    } else {
+    }
+    else {
         "bg-white/95 border border-black/20 rounded-full py-[0.45rem] px-[0.9rem] font-semibold cursor-pointer"
     }
 }
@@ -45,6 +46,7 @@ pub fn KnowledgeSpace() -> Element {
                 .map(|vm| SnippetInput {
                     note_id: vm.id.clone().unwrap_or_else(|| vm.local_key.clone()),
                     snippet_count: vm.snippet_count,
+                    embeddings: vm.embeddings.clone(),
                 })
                 .collect();
 
@@ -60,6 +62,7 @@ pub fn KnowledgeSpace() -> Element {
                 .map(|vm| NoteInput {
                     id: vm.id.clone().unwrap_or(vm.local_key.clone()),
                     snippet_count: vm.snippet_count,
+                    embeddings: vm.embeddings.clone(),
                 })
                 .collect();
             let knot_inputs = map_knot_inputs(&knot_store);
@@ -98,8 +101,8 @@ pub fn KnowledgeSpace() -> Element {
     });
 
     rsx! {
-        div { class: "absolute top-0 w-screen h-screen",
-            div { class: "grid grid-cols-[1fr_80px_120px_80px_1fr] items-end gap-8 absolute bottom-0 w-screen pb-4",
+        div { class: "absolute top-0 w-screen h-screen", style: "pointer-events: none;",
+            div { class: "grid grid-cols-[1fr_80px_120px_80px_1fr] items-end gap-8 absolute bottom-0 w-screen pb-4", style: "pointer-events: auto;",
                 div { class: "absolute left-0 right-0 bottom-[calc(100%+0.75rem)] flex flex-wrap justify-center gap-2",
                     button {
                         class: tier_class(*tier.read() == SpaceTierUi::Snippets),

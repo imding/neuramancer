@@ -20,6 +20,18 @@ pub enum SnippetData {
     VideoSnippet(VideoSnippet),
 }
 
+impl SnippetData {
+    /// Returns the embedding vector for this snippet, if any.
+    pub fn embedding(&self) -> &[f32] {
+        match self {
+            SnippetData::AudioSnippet(s) => &s.embedding,
+            SnippetData::ImageSnippet(s) => &s.embedding,
+            SnippetData::TextSnippet(s) => &s.embedding,
+            SnippetData::VideoSnippet(s) => &s.embedding,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, PutId)]
 pub struct Snippet {
     #[cfg(feature = "server")]

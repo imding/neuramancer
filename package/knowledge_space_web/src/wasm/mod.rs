@@ -1,16 +1,42 @@
+mod plugin;
+
 use {
     bevy::{
         prelude::*,
         window::{Window, WindowPlugin},
     },
-    knowledge_space_core::{
-        GraphEdgeInput, GraphInputSnapshot, GraphInputState, GraphNodeInput, KnowledgeSpacePlugin,
-        SpaceTier,
-    },
+    knowledge_space_core::{GraphEdgeInput, GraphInputSnapshot, GraphNodeInput, SpaceTier},
     once_cell::sync::Lazy,
-    std::sync::atomic::{AtomicBool, Ordering},
+    plugin::KnowledgeSpacePlugin,
+    std::sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
     web_sys::{Event, window},
 };
+
+/// Shared state between the Dioxus UI and the Bevy scene.
+///
+/// Wraps the core [`GraphInputSnapshot`] in an `Arc<Mutex<...>>` and derives
+/// [`Resource`] so it can be inserted into the Bevy world.
+#[derive(Resource, Clone)]
+pub struct GraphInputState {
+    pub shared: Arc<Mutex<GraphInputSnapshot>>,
+}
+
+impl Default for GraphInputState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl GraphInputState {
+    pub fn new() -> Self {
+        Self {
+            shared: Arc::new(Mutex::new(GraphInputSnapshot::default())),
+        }
+    }
+}
 
 static BEVY_STARTED: AtomicBool = AtomicBool::new(false);
 static SHARED_STATE: Lazy<GraphInputState> = Lazy::new(GraphInputState::new);

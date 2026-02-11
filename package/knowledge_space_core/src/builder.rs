@@ -1,15 +1,24 @@
-use crate::{EdgeKind, GraphEdgeInput, GraphNodeInput, MeshKind, NodeKind};
+use {
+    crate::{EdgeKind, GraphEdgeInput, GraphNodeInput, MeshKind, NodeKind},
+    glyph_core::{PositionConfig, compute_positions, glyph_for_embedding},
+};
+
+const GLYPH_SCALE: f32 = 1.5;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct NoteInput {
     pub id: String,
     pub snippet_count: usize,
+    /// Embedding vectors from all snippets in this note.
+    pub embeddings: Vec<Vec<f32>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SnippetInput {
     pub note_id: String,
     pub snippet_count: usize,
+    /// Embedding vectors for snippets belonging to this note.
+    pub embeddings: Vec<Vec<f32>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -21,11 +30,30 @@ pub struct KnotInput {
 }
 
 pub fn build_note_nodes(note_inputs: &[NoteInput]) -> Vec<GraphNodeInput> {
+    // Collect the first embedding from each note (if available) for layout.
+    let embeddings: Vec<Vec<f32>> = note_inputs
+        .iter()
+        .map(|input| input.embeddings.first().cloned().unwrap_or_default())
+        .collect();
+
+    // Positions: PaCMAP when possible, grid fallback otherwise.
+    let positions = compute_positions(&embeddings, &PositionConfig::default());
+
     note_inputs
         .iter()
         .enumerate()
         .map(|(index, input)| {
-            let position = grid_position(index, 8, 2.2, 0.8);
+            let embedding = &embeddings[index];
+
+            // Position: from PaCMAP/grid fallback (always available).
+            let position = positions
+                .get(index)
+                .copied()
+                .unwrap_or_else(|| grid_position(index, 8, 2.2, 0.8));
+
+            // Glyph: real glyph from embedding, or placeholder diamond.
+            let glyph = glyph_for_embedding(embedding, GLYPH_SCALE);
+
             GraphNodeInput {
                 id: input.id.clone(),
                 kind: NodeKind::Note,
@@ -33,6 +61,7 @@ pub fn build_note_nodes(note_inputs: &[NoteInput]) -> Vec<GraphNodeInput> {
                 position,
                 mesh_kind: MeshKind::Cube,
                 color: [120, 210, 165, 255],
+                glyph: Some(glyph),
             }
         })
         .collect()
@@ -46,22 +75,43 @@ pub fn build_note_edges(knot_inputs: &[KnotInput]) -> Vec<GraphEdgeInput> {
 }
 
 pub fn build_snippet_nodes(inputs: &[SnippetInput]) -> Vec<GraphNodeInput> {
-    inputs
+    // Flatten all snippets with their metadata.
+    let flat: Vec<(String, String, Vec<f32>)> = inputs
         .iter()
         .flat_map(|input| {
             (0..input.snippet_count).map(move |index| {
                 let snippet_id = format!("snippet:{}:{}", input.note_id, index);
-                (input.note_id.clone(), snippet_id)
+                let embedding = input.embeddings.get(index).cloned().unwrap_or_default();
+                (input.note_id.clone(), snippet_id, embedding)
             })
         })
+        .collect();
+
+    let embeddings: Vec<Vec<f32>> = flat.iter().map(|(_, _, e)| e.clone()).collect();
+
+    // Positions: PaCMAP when possible, grid fallback otherwise.
+    let positions = compute_positions(&embeddings, &PositionConfig::default());
+
+    flat.iter()
         .enumerate()
-        .map(|(index, (note_id, snippet_id))| GraphNodeInput {
-            id: snippet_id,
-            kind: NodeKind::Snippet,
-            group_id: Some(note_id),
-            position: grid_position(index, 10, 1.4, 0.6),
-            mesh_kind: MeshKind::Sphere,
-            color: [118, 167, 255, 255],
+        .map(|(index, (note_id, snippet_id, embedding))| {
+            let position = positions
+                .get(index)
+                .copied()
+                .unwrap_or_else(|| grid_position(index, 10, 1.4, 0.6));
+
+            // Glyph: real glyph from embedding, or placeholder diamond.
+            let glyph = glyph_for_embedding(embedding, GLYPH_SCALE);
+
+            GraphNodeInput {
+                id: snippet_id.clone(),
+                kind: NodeKind::Snippet,
+                group_id: Some(note_id.clone()),
+                position,
+                mesh_kind: MeshKind::Sphere,
+                color: [118, 167, 255, 255],
+                glyph: Some(glyph),
+            }
         })
         .collect()
 }
@@ -89,6 +139,7 @@ pub fn build_knot_intermediate_nodes(knot_inputs: &[KnotInput]) -> Vec<GraphNode
             position: grid_position(index, 5, 3.0, 1.0),
             mesh_kind: MeshKind::Capsule,
             color: [252, 200, 114, 255],
+            glyph: None,
         })
         .collect()
 }
@@ -109,6 +160,7 @@ pub fn build_knot_intermediate_edges(knot_inputs: &[KnotInput]) -> Vec<GraphEdge
 
 pub fn build_knot_root_nodes(knot_inputs: &[KnotInput]) -> Vec<GraphNodeInput> {
     let mut child_ids = std::collections::HashSet::new();
+
     for input in knot_inputs {
         for child_id in &input.child_knot_ids {
             child_ids.insert(child_id.clone());
@@ -126,6 +178,7 @@ pub fn build_knot_root_nodes(knot_inputs: &[KnotInput]) -> Vec<GraphNodeInput> {
             position: grid_position(index, 5, 3.0, 1.0),
             mesh_kind: MeshKind::Capsule,
             color: [250, 186, 120, 255],
+            glyph: None,
         })
         .collect()
 }
@@ -168,10 +221,12 @@ mod tests {
             SnippetInput {
                 note_id: "note:a".into(),
                 snippet_count: 2,
+                embeddings: Vec::new(),
             },
             SnippetInput {
                 note_id: "note:b".into(),
                 snippet_count: 3,
+                embeddings: Vec::new(),
             },
         ];
         let nodes = build_snippet_nodes(&inputs);
@@ -205,6 +260,7 @@ mod tests {
         let inputs = vec![SnippetInput {
             note_id: "note:a".into(),
             snippet_count: 0,
+            embeddings: Vec::new(),
         }];
         let nodes = build_snippet_nodes(&inputs);
         assert!(nodes.is_empty());
@@ -216,10 +272,12 @@ mod tests {
             SnippetInput {
                 note_id: "note:a".into(),
                 snippet_count: 3,
+                embeddings: Vec::new(),
             },
             SnippetInput {
                 note_id: "note:b".into(),
                 snippet_count: 2,
+                embeddings: Vec::new(),
             },
         ];
         let edges = build_snippet_edges(&inputs);
@@ -242,6 +300,7 @@ mod tests {
         let inputs = vec![SnippetInput {
             note_id: "note:a".into(),
             snippet_count: 1,
+            embeddings: Vec::new(),
         }];
         let edges = build_snippet_edges(&inputs);
         assert!(edges.is_empty());
@@ -255,14 +314,17 @@ mod tests {
             NoteInput {
                 id: "note:1".into(),
                 snippet_count: 3,
+                embeddings: Vec::new(),
             },
             NoteInput {
                 id: "note:2".into(),
                 snippet_count: 1,
+                embeddings: Vec::new(),
             },
             NoteInput {
                 id: "note:3".into(),
                 snippet_count: 0,
+                embeddings: Vec::new(),
             },
         ];
         let nodes = build_note_nodes(&inputs);
@@ -281,6 +343,7 @@ mod tests {
         let inputs = vec![NoteInput {
             id: "note:temp:42".into(),
             snippet_count: 1,
+            embeddings: Vec::new(),
         }];
         let nodes = build_note_nodes(&inputs);
 

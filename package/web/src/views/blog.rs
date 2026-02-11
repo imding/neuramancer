@@ -3,7 +3,7 @@ use {crate::Route, dioxus::prelude::*};
 #[component]
 pub fn Blog(id: i32) -> Element {
     rsx! {
-        div { class: "mt-[50px]",
+        div { class: "mt-[50px] pointer-events-auto",
 
             // Content
             h1 { "This is blog #{id}!" }
