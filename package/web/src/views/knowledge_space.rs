@@ -1,27 +1,136 @@
 use {
     dioxus::{logger::tracing, prelude::*},
-    ui::{GraphEditor, NoteCreator},
+    knowledge_space_web::{
+        SpaceTier,
+        builder::{
+            KnotInput, NoteInput, SnippetInput, build_knot_intermediate_edges,
+            build_knot_intermediate_nodes, build_knot_root_nodes, build_note_edges,
+            build_note_nodes, build_snippet_edges, build_snippet_nodes,
+        },
+        set_graph_edges, set_graph_nodes, set_space_tier,
+    },
+    ui::{GraphEditor, KnotStore, NoteCreator, use_knot_store, use_notes_store},
 };
 
-const KNOWLEDGE_SPACE_CSS: Asset = asset!("/assets/knowledge_space.css");
+#[derive(Clone, Copy, PartialEq)]
+enum SpaceTierUi {
+    Snippets,
+    Notes,
+    KnotIntermediate,
+    KnotRoot,
+}
+
+fn tier_class(active: bool) -> &'static str {
+    if active {
+        "bg-[#1f1f1f] border border-[#1f1f1f] text-white rounded-full py-[0.45rem] px-[0.9rem] font-semibold cursor-pointer"
+    }
+    else {
+        "bg-white/95 border border-black/20 rounded-full py-[0.45rem] px-[0.9rem] font-semibold cursor-pointer"
+    }
+}
 
 #[component]
 pub fn KnowledgeSpace() -> Element {
     let handle_config = move |_| {};
+    let store = use_notes_store();
+    let knot_store = use_knot_store();
+    let mut tier = use_signal(|| SpaceTierUi::Notes);
+    let graph = use_memo(move || match *tier.read() {
+        SpaceTierUi::Snippets => {
+            let inputs: Vec<SnippetInput> = store
+                .read()
+                .state
+                .read()
+                .items
+                .iter()
+                .map(|vm| SnippetInput {
+                    note_id: vm.id.clone().unwrap_or_else(|| vm.local_key.clone()),
+                    snippet_count: vm.snippet_count,
+                    embeddings: vm.embeddings.clone(),
+                })
+                .collect();
+
+            (build_snippet_nodes(&inputs), build_snippet_edges(&inputs))
+        }
+        SpaceTierUi::Notes => {
+            let note_inputs: Vec<NoteInput> = store
+                .read()
+                .state
+                .read()
+                .items
+                .iter()
+                .map(|vm| NoteInput {
+                    id: vm.id.clone().unwrap_or(vm.local_key.clone()),
+                    snippet_count: vm.snippet_count,
+                    embeddings: vm.embeddings.clone(),
+                })
+                .collect();
+            let knot_inputs = map_knot_inputs(&knot_store);
+
+            (
+                build_note_nodes(&note_inputs),
+                build_note_edges(&knot_inputs),
+            )
+        }
+        SpaceTierUi::KnotIntermediate => {
+            let ki = map_knot_inputs(&knot_store);
+
+            (
+                build_knot_intermediate_nodes(&ki),
+                build_knot_intermediate_edges(&ki),
+            )
+        }
+        SpaceTierUi::KnotRoot => {
+            let ki = map_knot_inputs(&knot_store);
+            (build_knot_root_nodes(&ki), Vec::new())
+        }
+    });
+
+    use_effect(move || {
+        let current_tier = match *tier.read() {
+            SpaceTierUi::Snippets => SpaceTier::Snippet,
+            SpaceTierUi::Notes => SpaceTier::Note,
+            SpaceTierUi::KnotIntermediate => SpaceTier::KnotIntermediate,
+            SpaceTierUi::KnotRoot => SpaceTier::KnotRoot,
+        };
+        let (nodes, edges) = graph();
+
+        set_space_tier(current_tier);
+        set_graph_nodes(nodes);
+        set_graph_edges(edges);
+    });
 
     rsx! {
-        document::Link { rel: "stylesheet", href: KNOWLEDGE_SPACE_CSS }
-
-        div { id: "knowledge-space",
-
-            div { id: "bevy-render" }
-
-            div { id: "controls",
+        div { class: "absolute top-0 w-screen h-screen", style: "pointer-events: none;",
+            div { class: "grid grid-cols-[1fr_80px_120px_80px_1fr] items-end gap-8 absolute bottom-0 w-screen pb-4", style: "pointer-events: auto;",
+                div { class: "absolute left-0 right-0 bottom-[calc(100%+0.75rem)] flex flex-wrap justify-center gap-2",
+                    button {
+                        class: tier_class(*tier.read() == SpaceTierUi::Snippets),
+                        onclick: move |_| tier.set(SpaceTierUi::Snippets),
+                        "Snippet Space"
+                    }
+                    button {
+                        class: tier_class(*tier.read() == SpaceTierUi::Notes),
+                        onclick: move |_| tier.set(SpaceTierUi::Notes),
+                        "Note Space"
+                    }
+                    button {
+                        class: tier_class(*tier.read() == SpaceTierUi::KnotIntermediate),
+                        onclick: move |_| tier.set(SpaceTierUi::KnotIntermediate),
+                        "Knot Intermediate"
+                    }
+                    button {
+                        class: tier_class(*tier.read() == SpaceTierUi::KnotRoot),
+                        onclick: move |_| tier.set(SpaceTierUi::KnotRoot),
+                        "Knot Root"
+                    }
+                }
 
                 br {}
 
-                button { onclick: handle_config,
-
+                button {
+                    class: "bg-white border-none p-4 cursor-pointer rounded-full [&_svg]:w-full [&_svg]:h-full",
+                    onclick: handle_config,
                     svg {
                         xmlns: "http://www.w3.org/2000/svg",
                         width: "512",
@@ -35,12 +144,54 @@ pub fn KnowledgeSpace() -> Element {
                     }
                 }
 
-                NoteCreator { handle_created: move |note| tracing::debug!("{note:?}") }
+                NoteCreator {
+                    handle_created: move |note| {
+                        tracing::debug!("{note:?}");
+                    }
+                }
 
-                GraphEditor { handle_updated: move |_| tracing::debug!("Graph updated") }
+                GraphEditor {
+                    handle_updated: move |_| {
+                        knot_store.read().refresh();
+                    }
+                }
 
                 br {}
             }
         }
     }
+}
+
+fn map_knot_inputs(knot_store: &Signal<KnotStore>) -> Vec<KnotInput> {
+    knot_store
+        .read()
+        .state
+        .read()
+        .items
+        .iter()
+        .map(|vm| KnotInput {
+            id: vm.id.clone().unwrap_or_else(|| vm.local_key.clone()),
+            label: vm.knot.as_ref().map(|knot| knot.label.clone()),
+            child_knot_ids: vm
+                .knot
+                .as_ref()
+                .map(|knot| {
+                    knot.knots
+                        .iter()
+                        .filter_map(|child| child.id_.clone())
+                        .collect()
+                })
+                .unwrap_or_default(),
+            note_ids: vm
+                .knot
+                .as_ref()
+                .map(|knot| {
+                    knot.notes
+                        .iter()
+                        .filter_map(|note| note.id_.clone())
+                        .collect()
+                })
+                .unwrap_or_default(),
+        })
+        .collect()
 }

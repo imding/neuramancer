@@ -1,8 +1,10 @@
 [core]
-   path = "./backend/src/surreal"
+   path = "./package/backend/src/surreal"
    schema = "less"
 
 [db]
-   address = "mem://"
+   address = "http://localhost:8000"
+   username = "root"
+   password = "root"
    ns = "development"
    db = "neuramancer"

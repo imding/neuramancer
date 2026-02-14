@@ -1,0 +1,36 @@
+[package]
+name = "knowledge_space_web"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+knowledge_space_core.workspace = true
+
+glyph_core = { workspace = true, optional = true }
+once_cell = { workspace = true, optional = true }
+web-sys = { workspace = true, optional = true }
+
+[dependencies.bevy]
+workspace = true
+optional = true
+features = [
+  "bevy_asset",
+  "bevy_core_pipeline",
+  "bevy_gizmos",
+  "bevy_gizmos_render",
+  "bevy_pbr",
+  "bevy_render",
+  "bevy_winit",
+  "bevy_window",
+  "web",
+  "webgl2"
+]
+
+[features]
+default = []
+bevy = [
+  "dep:bevy",
+  "dep:glyph_core",
+  "dep:once_cell",
+  "dep:web-sys"
+]

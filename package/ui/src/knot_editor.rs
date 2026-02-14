@@ -3,13 +3,13 @@ use {
     schema::Knot,
 };
 
-const KNOT_EDITOR_CSS: Asset = asset!("/assets/styling/knot_editor.css");
-
 #[derive(Clone, PartialEq, Props)]
 pub struct KnotEditorProps {
     handle_created: Option<Callback<Knot>>,
     handle_cancel: Option<Callback<()>>,
 }
+
+const INPUT_CLASS: &str = "p-2 border border-[#444] bg-[#2a2e3a] text-white rounded focus:outline-none focus:border-[#6d85c6] disabled:opacity-60 disabled:cursor-not-allowed";
 
 #[component]
 pub fn KnotEditor(props: KnotEditorProps) -> Element {
@@ -78,25 +78,25 @@ pub fn KnotEditor(props: KnotEditorProps) -> Element {
     };
 
     rsx! {
-        document::Link { rel: "stylesheet", href: KNOT_EDITOR_CSS }
+        div { class: "w-[480px] bg-[#1e222d] p-5 rounded-[10px] grid gap-4 [#graph-editor_&]:w-full [#graph-editor_&]:p-0 [#graph-editor_&]:bg-transparent [#graph-editor_&]:rounded-none",
 
-        div { id: "knot-editor",
-
-            h4 { "Create New Knot" }
+            h4 { class: "mb-[15px] text-white", "Create New Knot" }
 
             if let Some(error) = error_message() {
-                div { class: "error-message", "{error}" }
+                div { class: "p-3 bg-[#dc3545] text-white rounded text-sm", "{error}" }
             }
 
-            div { class: "form-group",
-                label { r#for: "label-input", "Label" }
+            div { class: "grid gap-2",
+                label { class: "text-white font-medium text-sm", r#for: "label-input", "Label" }
                 input {
+                    class: INPUT_CLASS,
                     id: "label-input",
                     value: label(),
                     oninput: move |event| label.set(event.value()),
                 }
-                label { r#for: "intent-input", "Intent" }
+                label { class: "text-white font-medium text-sm", r#for: "intent-input", "Intent" }
                 textarea {
+                    class: "{INPUT_CLASS} min-h-[80px] resize-y font-[inherit]",
                     id: "intent-input",
                     placeholder: "Describe the purpose or theme of this knot...",
                     value: intent(),
@@ -105,16 +105,17 @@ pub fn KnotEditor(props: KnotEditorProps) -> Element {
                 }
             }
 
-            div { class: "form-group",
-                label { "Note IDs:" }
+            div { class: "grid gap-2",
+                label { class: "text-white font-medium text-sm", "Note IDs:" }
                 if note_ids().is_empty() {
-                    p { class: "empty-state",
+                    p { class: "text-[#888] italic text-sm my-2",
                         "No note IDs added. Click 'Add Note' to include notes in this knot."
                     }
                 }
                 for (index , note_id) in note_ids().iter().enumerate() {
-                    div { class: "input-row", key: "note-id-{index}",
+                    div { class: "grid grid-cols-[1fr_auto] gap-2 items-center", key: "note-id-{index}",
                         input {
+                            class: INPUT_CLASS,
                             r#type: "text",
                             placeholder: "Enter note ID...",
                             value: note_id.clone(),
@@ -125,7 +126,7 @@ pub fn KnotEditor(props: KnotEditorProps) -> Element {
                         }
                         button {
                             r#type: "button",
-                            class: "remove-button",
+                            class: "py-1.5 px-3 bg-[#dc3545] text-white border-none rounded cursor-pointer text-xs transition-colors duration-200 hover:not-disabled:bg-[#c82333] disabled:opacity-60 disabled:cursor-not-allowed",
                             onclick: {
                                 move |_| remove_note_field(index)
                             },
@@ -136,23 +137,24 @@ pub fn KnotEditor(props: KnotEditorProps) -> Element {
                 }
                 button {
                     r#type: "button",
-                    class: "add-button",
+                    class: "py-2 px-4 bg-[#28a745] text-white border-none rounded cursor-pointer text-sm transition-colors duration-200 justify-self-start hover:not-disabled:bg-[#218838] disabled:opacity-60 disabled:cursor-not-allowed",
                     onclick: add_note_field,
                     disabled: is_saving(),
                     "Add Note"
                 }
             }
 
-            div { class: "form-group",
-                label { "Knot IDs:" }
+            div { class: "grid gap-2",
+                label { class: "text-white font-medium text-sm", "Knot IDs:" }
                 if knot_ids().is_empty() {
-                    p { class: "empty-state",
+                    p { class: "text-[#888] italic text-sm my-2",
                         "No knot IDs added. Click 'Add Knot' to include other knots in this knot."
                     }
                 } else {
                     for (index , knot_id) in knot_ids().iter().enumerate() {
-                        div { class: "input-row", key: "knot-{index}",
+                        div { class: "grid grid-cols-[1fr_auto] gap-2 items-center", key: "knot-{index}",
                             input {
+                                class: INPUT_CLASS,
                                 r#type: "text",
                                 placeholder: "Enter knot ID...",
                                 value: knot_id.clone(),
@@ -163,7 +165,7 @@ pub fn KnotEditor(props: KnotEditorProps) -> Element {
                             }
                             button {
                                 r#type: "button",
-                                class: "remove-button",
+                                class: "py-1.5 px-3 bg-[#dc3545] text-white border-none rounded cursor-pointer text-xs transition-colors duration-200 hover:not-disabled:bg-[#c82333] disabled:opacity-60 disabled:cursor-not-allowed",
                                 onclick: {
                                     move |_| remove_knot_field(index)
                                 },
@@ -175,24 +177,24 @@ pub fn KnotEditor(props: KnotEditorProps) -> Element {
                 }
                 button {
                     r#type: "button",
-                    class: "add-button",
+                    class: "py-2 px-4 bg-[#28a745] text-white border-none rounded cursor-pointer text-sm transition-colors duration-200 justify-self-start hover:not-disabled:bg-[#218838] disabled:opacity-60 disabled:cursor-not-allowed",
                     onclick: add_knot_field,
                     disabled: is_saving(),
                     "Add Knot"
                 }
             }
 
-            div { class: "button-group",
+            div { class: "grid grid-cols-2 gap-3 mt-4",
                 button {
                     r#type: "button",
-                    class: "cancel-button",
+                    class: "py-2.5 px-4 bg-[#6c757d] text-white border-none rounded cursor-pointer transition-colors duration-200 hover:not-disabled:bg-[#5a6268] disabled:opacity-60 disabled:cursor-not-allowed",
                     onclick: handle_cancel,
                     disabled: is_saving(),
                     "Cancel"
                 }
                 button {
                     r#type: "button",
-                    class: "save-button",
+                    class: "py-2.5 px-4 bg-[#6d85c6] text-white border-none rounded cursor-pointer transition-colors duration-200 hover:not-disabled:bg-[#5a73b3] disabled:opacity-60 disabled:cursor-not-allowed",
                     onclick: move |_| {
                         async move {
                             if !is_valid() {

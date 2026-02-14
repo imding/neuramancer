@@ -18,7 +18,7 @@ thiserror.workspace = true
 
 chrono = { workspace = true, optional = true }
 cuid2 = { workspace = true, optional = true }
-# fastembed = { workspace = true, optional = true }
+embed_anything = { workspace = true, optional = true, features = ["ort", "audio"] }
 once_cell = { workspace = true, optional = true }
 # qdrant-client = { workspace = true, optional = true }
 # sqlx = { workspace = true, optional = true }
@@ -34,6 +34,7 @@ server = [
     "dep:chrono",
     "dep:cuid2",
     # "dep:fastembed",
+    "dep:embed_anything",
     "dep:once_cell",
     # "dep:qdrant-client",
     # "dep:sqlx",

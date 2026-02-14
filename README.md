@@ -18,11 +18,21 @@ Or user shell script
 ## Web
 
 Serve the web application
-```bash
+```sh
 dx serve -p web
 ```
 
 ## Service Dependencies
+
+### SurrealDB
+
+```sh
+# local
+surreal start --log trace --user root --pass root --bind 127.0.0.1:8000 memory
+
+# remote
+# TBD
+```
 
 Serve locally via docker
 ```sh

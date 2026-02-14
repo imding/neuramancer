@@ -3,8 +3,6 @@ use {
     dioxus::{html::FormValue, prelude::*},
 };
 
-const NOTE_EDITOR_CSS: Asset = asset!("/assets/styling/note_editor.css");
-
 #[derive(Clone, PartialEq, Props)]
 pub struct NoteEditorProps {
     /// Optional callback for callers that still want to observe the edit.
@@ -19,10 +17,8 @@ pub fn NoteEditor(props: NoteEditorProps) -> Element {
     let store = use_notes_store();
 
     rsx! {
-        document::Link { rel: "stylesheet", href: NOTE_EDITOR_CSS }
-
         form {
-            id: "note-editor",
+            class: "w-[360px] bg-[#1e222d] p-5 rounded-[10px] grid gap-1",
             onsubmit: move |event| async move {
                 event.prevent_default();
 
@@ -43,11 +39,11 @@ pub fn NoteEditor(props: NoteEditorProps) -> Element {
                 let _ = props.handle_edited;
             },
 
-            h4 { "Note Editor" }
+            h4 { class: "mb-[15px] text-white", "Note Editor" }
 
-            textarea { id: "note-editor-input", name: "content" }
+            textarea { class: "min-h-[100px]", name: "content" }
 
-            input { id: "note-editor-save-button", r#type: "submit" }
+            input { r#type: "submit" }
         }
     }
 }

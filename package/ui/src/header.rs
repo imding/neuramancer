@@ -1,13 +1,9 @@
 use dioxus::prelude::*;
 
-const HEADER_CSS: Asset = asset!("/assets/styling/header.css");
-
 #[component]
 pub fn Header(left: Element, right: Element) -> Element {
     rsx! {
-        document::Link { rel: "stylesheet", href: HEADER_CSS }
-
-        div { id: "header",
+        div { class: "relative grid grid-cols-[1fr_min-content_1fr] items-center w-screen z-[99] pointer-events-auto",
 
             {left}
 

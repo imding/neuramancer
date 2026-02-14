@@ -1,3 +1,6 @@
 DEFINE TABLE image_snippet TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
 
 DEFINE FIELD path ON image_snippet TYPE string PERMISSIONS FULL;
+DEFINE FIELD embedding ON image_snippet TYPE array<float> PERMISSIONS FULL;
+
+DEFINE INDEX image_snippet_embedding ON image_snippet FIELDS embedding HNSW DIMENSION 768 DIST COSINE TYPE F32;

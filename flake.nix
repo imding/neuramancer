@@ -127,7 +127,8 @@
               || (lib.hasInfix "/surreal/migrations" path)
               || (lib.hasInfix "/surreal/schemas" path)
               || (lib.hasInfix "/surreal/events" path)
-              || (lib.hasSuffix ".surrealdb" path);
+              || (lib.hasSuffix ".surrealdb" path)
+              || (lib.hasSuffix "tailwind.css" path);
           };
 
           web = craneLib.buildPackage {
@@ -145,16 +146,19 @@
               binaryen
               dioxus-cli_0_7_3
               pkg-config
+              tailwindcss_4
               wasm-bindgen-cli_0_2_108
             ];
 
             buildInputs = with pkgs; [
               openssl
-              # onnxruntime
+              openblas
+              onnxruntime
+              stdenv.cc.cc.lib
             ];
 
-            # ORT_STRATEGY = "system";
-            # ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
+            ORT_STRATEGY = "system";
+            ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
 
             buildPhase = ''
               runHook preBuild
@@ -223,27 +227,32 @@
 
               # Rust/Dioxus tools
               dioxus-cli_0_7_3
+              tailwindcss_4
               wasm-bindgen-cli_0_2_108
 
               # Build dependencies (needed for dx serve/bundle)
               pkg-config
               openssl
-              # onnxruntime
+              openblas
+              onnxruntime
+              stdenv.cc.cc.lib
 
               # Development tools
               git
               helix
               jujutsu
-              # surrealdb
+              surrealdb
               # surrealist
               surrealdb-migrations
+              tmux
             ];
 
             shellHook = ''
               export RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}
               export DISPLAY=:0
-              # export ORT_STRATEGY=system
-              # export ORT_LIB_LOCATION=${pkgs.onnxruntime}/lib
+              export ORT_STRATEGY=system
+              export ORT_LIB_LOCATION=${pkgs.onnxruntime}/lib
+              export LD_LIBRARY_PATH=${pkgs.openssl.out}/lib:${pkgs.onnxruntime}/lib:${pkgs.openblas}/lib:${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH
             '';
           };
         };

@@ -1,6 +1,6 @@
 use {
-    crate::optimistic::{run_optimistic_with_inflight, run_refresh, Inflight, InflightKind, OpId},
-    backend::NewNote,
+    crate::optimistic::{Inflight, InflightKind, OpId, run_optimistic_with_inflight, run_refresh},
+    backend::{NewNote, delete_note, read_notes, save_note},
     dioxus::{logger::tracing, prelude::*},
     std::collections::HashMap,
 };
@@ -50,6 +50,10 @@ pub struct NoteVm {
     /// Snippet count for display.
     pub snippet_count: usize,
 
+    /// Embedding vectors from all snippets in this note.
+    /// Each entry is the raw embedding of one snippet.
+    pub embeddings: Vec<Vec<f32>>,
+
     pub status: NoteStatus,
 
     /// The last op that mutated this entity. Can be used to guard against out-of-order
@@ -77,14 +81,17 @@ pub fn NotesStoreProvider(children: Element) -> Element {
     // Hydrate once on mount.
     use_future(move || {
         let store = store;
+
         async move {
             // Copy the signal handles out synchronously to avoid holding a read guard across `.await`.
             let (state, inflight) = {
                 let s = store.read();
+
                 (s.state, s.inflight)
             };
 
             let tmp = NotesStore { state, inflight };
+
             tmp.refresh();
         }
     });
@@ -103,7 +110,7 @@ impl NotesStore {
         run_refresh(
             state,
             inflight,
-            || async { backend::read_notes().await },
+            || async { read_notes().await },
             |s, _op_id, server_notes| {
                 // Preserve any still-pending creates to avoid them disappearing during refresh.
                 let pending: Vec<NoteVm> = s
@@ -115,16 +122,26 @@ impl NotesStore {
 
                 let mut vms: Vec<NoteVm> = server_notes
                     .into_iter()
-                    .map(|note| NoteVm {
-                        id: note.id_.clone(),
-                        local_key: note
-                            .id_
-                            .clone()
-                            .map(|id| format!("note:{id}"))
-                            .unwrap_or_else(|| "note:unknown".to_string()),
-                        snippet_count: note.snippets.len(),
-                        status: NoteStatus::Saved,
-                        last_op: None,
+                    .map(|note| {
+                        let embeddings: Vec<Vec<f32>> = note
+                            .snippets
+                            .iter()
+                            .map(|snippet| snippet.data.embedding().to_vec())
+                            .filter(|e| !e.is_empty())
+                            .collect();
+
+                        NoteVm {
+                            id: note.id_.clone(),
+                            local_key: note
+                                .id_
+                                .clone()
+                                .map(|id| format!("note:{id}"))
+                                .unwrap_or_else(|| "note:unknown".to_string()),
+                            snippet_count: note.snippets.len(),
+                            embeddings,
+                            status: NoteStatus::Saved,
+                            last_op: None,
+                        }
                     })
                     .collect();
 
@@ -158,13 +175,14 @@ impl NotesStore {
             state,
             inflight,
             InflightKind::Create,
-            move || async move { backend::save_note(content).await },
+            move || async move { save_note(content).await },
             |s, op_id| {
                 let temp_key = format!("temp:{op_id}");
                 let vm = NoteVm {
                     id: None,
                     local_key: format!("note:{temp_key}"),
                     snippet_count: 0,
+                    embeddings: Vec::new(),
                     status: NoteStatus::PendingCreate {
                         op_id,
                         temp_key: temp_key.clone(),
@@ -215,7 +233,7 @@ impl NotesStore {
             InflightKind::Delete,
             {
                 let id = id.clone();
-                move || async move { backend::delete_note(id).await }
+                move || async move { delete_note(id).await }
             },
             move |s, op_id| {
                 let removed = remove_by_id(s, &id_for_optimistic);

@@ -1,7 +1,5 @@
 use {crate::NoteEditor, backend::NewNote, dioxus::prelude::*};
 
-const NOTE_CREATOR_CSS: Asset = asset!("/assets/styling/note_creator.css");
-
 #[derive(Clone, PartialEq, Props)]
 pub struct NoteCreatorProps {
     handle_created: Option<Callback<NewNote>>,
@@ -10,9 +8,9 @@ pub struct NoteCreatorProps {
 #[component]
 pub fn NoteCreator(props: NoteCreatorProps) -> Element {
     rsx! {
-        document::Link { rel: "stylesheet", href: NOTE_CREATOR_CSS }
-
-        button { id: "note-creator", popovertarget: "editor-wrapper",
+        button {
+            class: "bg-white border-none p-4 cursor-pointer rounded-full [&_svg]:w-full [&_svg]:h-full",
+            popovertarget: "editor-wrapper",
 
             svg {
                 xmlns: "http://www.w3.org/2000/svg",
@@ -27,7 +25,7 @@ pub fn NoteCreator(props: NoteCreatorProps) -> Element {
             }
         }
 
-        div { id: "editor-wrapper", popover: "auto",
+        div { id: "editor-wrapper", class: "bg-transparent border-none", popover: "auto",
 
             NoteEditor { handle_edited: props.handle_created }
         }

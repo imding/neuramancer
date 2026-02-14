@@ -31,7 +31,10 @@ pub async fn save_note(content: String) -> Result<NewNote, ServerFnError> {
     let result = state
         .surreal
         .create_note(vec![SnippetDataOrId::Data(SnippetData::TextSnippet(
-            TextSnippet { content },
+            TextSnippet {
+                content,
+                embedding: Vec::new(),
+            },
         ))])
         .await
         .map_err(|error| ServerFnError::ServerError {

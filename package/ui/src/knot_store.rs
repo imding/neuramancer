@@ -1,5 +1,5 @@
 use {
-    crate::optimistic::{run_optimistic_with_inflight, run_refresh, Inflight, InflightKind, OpId},
+    crate::optimistic::{Inflight, InflightKind, OpId, run_optimistic_with_inflight, run_refresh},
     dioxus::{logger::tracing, prelude::*},
     schema::Knot,
     std::collections::HashMap,

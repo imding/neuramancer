@@ -5,14 +5,17 @@ edition = "2024"
 
 [dependencies]
 backend.workspace = true
+knowledge_space_core.workspace = true
+knowledge_space_web.workspace = true
 schema.workspace = true
 ui.workspace = true
 
-cfg-if.workspace = true
-
 dioxus = { workspace = true, features = ["fullstack", "router"] }
 
-tokio = { workspace = true, optional = true }
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+knowledge_space_web = { workspace = true, features = ["bevy"] }
+wasm-bindgen.workspace = true
+web-sys.workspace = true
 
 [features]
 default = ["server", "web"]
